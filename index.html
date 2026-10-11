@@ -232,6 +232,12 @@
   }
   .tracklist li[data-idx]{animation:track-stack .6s ease both;animation-delay:calc(var(--track-index,0) * 90ms);}
   @keyframes track-stack{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+  .youtube-album{width:100%;}
+  .youtube-frame{width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;}
+  .youtube-frame iframe{display:block;width:100%;height:100%;border:0;}
+  .youtube-video-title{margin:10px 0 0;color:var(--text);font-size:14px;line-height:1.45;}
+  .youtube-video-title a{color:inherit;text-decoration:none;}
+  .youtube-video-title a:hover{color:var(--green);text-decoration:underline;}
   .track-num{ color:var(--muted); min-width:18px; font-size:13px; }
   .tracklist a.track-link{ color:var(--text); text-decoration:none; flex:1; }
   .tracklist a.track-link:hover{ color:var(--green); text-decoration:underline; }
@@ -1280,6 +1286,8 @@ async function showCandidate(a, cands, idx, tried){
 
   if(!cands.length){
     coverWrap.innerHTML = `<div class="cover-fallback">Geen hoes gevonden<br>${esc(a.artist)}<br>${esc(a.album)}</div>`;
+    const youtubeFound=await tryYoutubeFallback(a,requestId);
+    if(requestId!==currentRequestId || youtubeFound)return;
     trackListEl.innerHTML = `<li class="track-error">Album niet gevonden — geen tracklijst beschikbaar.</li>`;
     wrongBtn.hidden = true;
     return;
@@ -1312,11 +1320,44 @@ async function showCandidate(a, cands, idx, tried){
       showCandidate(a, cands, (idx + 1) % cands.length, tried + 1);
       return;
     }
+    const youtubeFound=await tryYoutubeFallback(a,requestId);
+    if(requestId!==currentRequestId || youtubeFound)return;
     trackListEl.innerHTML = `<li class="track-error">Geen tracklijst gevonden voor dit album.</li>`;
     return;
   }
 
   renderTracks(a, tracks, labelFor(a) + '|' + candKey(c), safeHttps(a.cover_url) || safeHttps(c.coverUrl));
+}
+function renderYoutubeAlbum(a,video){
+  const info=document.getElementById('albumInfo');
+  if(!info || !/^[A-Za-z0-9_-]{11}$/.test(video.videoId||''))return false;
+  const videoId=video.videoId;
+  const title=video.title||`${a.artist} – ${a.album}`;
+  info.innerHTML=`<h2 class="tracks-heading">Album op YouTube</h2><div class="youtube-album"><div class="youtube-frame"><iframe src="https://www.youtube-nocookie.com/embed/${videoId}" title="${esc(title)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><p class="youtube-video-title"><a href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener noreferrer">${esc(title)}</a></p></div>`;
+  info.inert=!isAlbumExpanded;
+  info.setAttribute('aria-hidden',String(!isAlbumExpanded));
+  return true;
+}
+async function tryYoutubeFallback(a,requestId){
+  if(a.youtube_checked===true){
+    if(a.youtube_video_id){return renderYoutubeAlbum(a,{videoId:a.youtube_video_id,title:a.youtube_video_title});}
+    return false;
+  }
+  const trackList=document.getElementById('trackList');
+  if(trackList)trackList.innerHTML='<li class="track-loading">Geen tracklijst. Zoeken naar een YouTube-album…</li>';
+  try{
+    const r=await fetch(DB_URL+'/functions/v1/youtube-album-fallback',{method:'POST',headers:{apikey:DB_KEY,'Content-Type':'application/json'},body:JSON.stringify({albumId:a.id}),signal:AbortSignal.timeout(20000)});
+    const result=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(result.error||'YouTube zoeken is niet beschikbaar.');
+    if(requestId!==currentRequestId)return true;
+    a.youtube_checked=result.checked===true;
+    a.youtube_video_id=result.videoId||null;
+    a.youtube_video_title=result.title||null;
+    return result.found===true && renderYoutubeAlbum(a,{videoId:result.videoId,title:result.title});
+  }catch(e){
+    console.warn('YouTube-album zoeken mislukt:',e.message);
+    return false;
+  }
 }
 function showStoreLink(url){
   const target = safeHttps(url);
