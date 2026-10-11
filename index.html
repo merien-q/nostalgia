@@ -113,22 +113,33 @@
     max-width:560px;
   }
 
-  #albumDisplay{
-    margin-top:28px; background:var(--panel); border-radius:12px;
-    padding:28px; display:none; gap:28px; flex-wrap:wrap;
-  }
-  #albumDisplay.visible{ display:flex; }
-
-  .cover-col{
-    display:flex; flex-direction:column; align-items:center;
-    gap:8px; width:260px; min-width:260px;
-  }
-  .cover-wrap{
-    width:260px; height:260px; min-width:260px; border-radius:10px;
-    overflow:hidden; background:#2a2a2a; display:flex;
-    align-items:center; justify-content:center;
-    box-shadow:0 10px 28px rgba(0,0,0,.45); position:relative;
-  }
+  #albumDisplay{display:none;margin-top:18px;flex:1;min-width:0;overflow-x:clip;}
+  #albumDisplay.visible{display:flex;align-items:center;justify-content:center;}
+  .album-layout{width:100%;display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:0;}
+  .cover-shell{width:min(100%,390px);justify-self:center;min-width:0;text-align:center;}
+  .cover-stage{position:relative;width:100%;touch-action:pan-y;}
+  .cover-toggle{display:block;position:relative;width:100%;padding:0;border:0;background:transparent;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:pan-y;}
+  .cover-toggle:focus-visible,.album-nav:focus-visible{outline:2px solid var(--green);outline-offset:6px;}
+  .cover-wrap{width:100%;aspect-ratio:1;position:relative;overflow:hidden;border-radius:12px;background:#242424;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 48px rgba(0,0,0,.4);}
+  .album-caption{padding:22px 4px 0;overflow-wrap:anywhere;}
+  .album-caption .artist-name{font-size:16px;margin:0 0 7px;}
+  .album-caption .album-title{font-size:clamp(22px,3vw,29px);line-height:1.2;font-weight:650;letter-spacing:-.6px;}
+  .album-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;padding:0;border:0;background:transparent;color:#aaa;font-size:34px;line-height:1;cursor:pointer;border-radius:9px;}
+  .album-nav:hover{background:#202020;color:#fff;}
+  .album-nav.prev{right:calc(100% + 20px);}.album-nav.next{left:calc(100% + 20px);}
+  .album-meta{display:none;margin-top:16px;}
+  .album-meta .match-info{margin:6px 0;}
+  .album-meta .wrong-btn{margin-top:8px;max-width:100%;}
+  .album-meta a{color:var(--muted);text-decoration:none;display:block;margin-top:7px;}
+  #albumDisplay .info{display:none;min-width:0;width:100%;}
+  #albumDisplay.expanded{align-items:flex-start;padding-top:12px;}
+  #albumDisplay.expanded .album-layout{grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:48px;}
+  #albumDisplay.expanded .cover-shell{width:100%;}
+  #albumDisplay.expanded .info{display:block;animation:reveal-tracks .45s ease both;}
+  #albumDisplay.expanded .album-meta{display:block;}
+  #albumDisplay.expanded .album-nav{display:none;}
+  .tracks-heading{margin:0 0 18px;color:var(--muted);font-size:12px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;}
+  @keyframes reveal-tracks{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .cover-wrap .spinner{ position:absolute; }
   .cover-wrap img{
     position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
@@ -183,7 +194,7 @@
   .ctl-btn.main:hover{ background:#1ed760; color:#121212; }
   .tracklist li.playing .track-link, .tracklist li.playing .track-num{ color:var(--green); }
 
-  .info{ flex:1; min-width:240px; }
+
   .title-row{ display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap; }
   .album-title{ font-size:27px; font-weight:700; margin:0; line-height:1.2; }
   .album-title a{ color:var(--text); text-decoration:none; }
@@ -230,11 +241,6 @@
     .dropdown-item{ font-size:15px; padding:14px 16px; }
     .dropdown-empty{ font-size:14px; }
 
-    #albumDisplay{ padding:20px; gap:20px; justify-content:center; }
-    .cover-col{ width:100%; max-width:260px; }
-    .cover-wrap{ width:100%; max-width:260px; height:auto; aspect-ratio:1/1; min-width:0; }
-    .info{ min-width:0; width:100%; }
-
     .album-title{ font-size:23px; }
     .artist-name{ font-size:15px; }
 
@@ -251,7 +257,50 @@
   button.track-link{border:0;background:none;color:var(--text);padding:0;text-align:left;flex:1;font:inherit;cursor:pointer;}
   button.track-link:hover{color:var(--green);}
   span.track-link{flex:1;}
-  .tracklist .source-link{font-size:11px;color:var(--muted);}
+  .tracklist .source-link{display:none;font-size:11px;color:var(--muted);}
+  .tracklist li.playing .source-link{display:inline-block;order:10;}
+  .tracklist .track-link{min-width:0;overflow-wrap:anywhere;line-height:1.4;}
+  .tracklist li[data-idx]{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;align-items:center;column-gap:10px;row-gap:8px;}
+  .tracklist .player{grid-column:1/-1;min-width:0;}
+  .tracklist li.playing .source-link{grid-column:2/-1;}
+  .track-num,.track-duration{min-width:0;}
+  .player .np{white-space:normal;overflow-wrap:anywhere;}
+  #albumDisplay.visible ~ footer{display:none;}
+  footer{margin-top:26px;opacity:.65;font-size:11px;}
+  .app{min-height:100svh;max-width:960px;}
+  .search-wrap{min-width:0;}
+  @media(max-width:720px){
+    .app{padding:16px 20px 24px;}
+    .top-bar{padding:0 0 12px;}
+    .app-toggle-row{font-size:11px;margin-bottom:10px;}
+    .search-row{flex-wrap:nowrap;gap:8px;}
+    .search-wrap{flex:1 1 0;}
+    #searchInput{padding:12px;font-size:16px;}
+    .action-btn{flex:0 0 auto;padding:12px;font-size:13px;}
+    .home-stage{padding:12px 0;}
+    .home-stage .search-row{margin-top:32px;}
+    #albumDisplay{margin-top:16px;padding:0;}
+    .cover-shell{width:min(100%,350px);}
+    .cover-wrap{border-radius:10px;}
+    .album-nav{display:none;}
+    .album-caption{padding-top:20px;}
+    .album-caption .artist-name{font-size:15px;}
+    .album-caption .album-title{font-size:25px;}
+    #albumDisplay.expanded{padding-top:0;}
+    #albumDisplay.expanded .album-layout{grid-template-columns:minmax(0,1fr);gap:28px;}
+    #albumDisplay.expanded .cover-shell{width:min(100%,350px);}
+    #albumDisplay.expanded .album-meta{display:none;}
+    #albumDisplay.expanded .info{max-width:480px;justify-self:center;}
+    .tracklist li[data-idx]{font-size:14px;padding:12px 0;}
+    .track-duration{font-size:12px;}
+    .tracks-heading{margin-bottom:12px;}
+    .player{padding:12px;}
+    footer{padding:0;margin-top:22px;}
+  }
+  @media(prefers-reduced-motion:reduce){
+    #albumDisplay.expanded .info{animation:none;}
+    .cover-wrap img{transition:opacity .2s linear;transform:none;}
+  }
   #collectionStatus{font-size:12px;color:var(--muted);margin-top:12px;}
   button:disabled{opacity:.45;cursor:wait;}
 </style>
@@ -278,7 +327,7 @@
   <main id="albumDisplay"></main>
 
   <footer>
-    Collectie uit de database · Albumgegevens via iTunes en Deezer waar nodig.<br>De speler laat korte previews horen. Spotify-links verschijnen alleen bij een gekoppeld album of nummer.
+    Korte previews, met links naar Spotify waar beschikbaar.
   </footer>
 </div>
 
@@ -298,6 +347,15 @@ const DB_KEY = 'sb_publishable__Cl45YCzMcAbKi1WHrng9A_s9DH6bz_';
 function safeHttps(value){
   try { const u = new URL(value); return u.protocol === 'https:' ? u.href : ''; }
   catch { return ''; }
+}
+function artworkUrl(value, size=1200){
+  const safe=safeHttps(value); if(!safe) return '';
+  const u=new URL(safe);
+  if(u.hostname.endsWith('.mzstatic.com')){
+    u.pathname=u.pathname.replace(/\/(\d+)x(\d+)([^/]*)$/, (all,w,h,tail)=>
+      Number(w)<size || Number(h)<size ? `/${size}x${size}${tail}` : all);
+  }
+  return u.href;
 }
 function spotifyItem(type, id){
   if(!/^[A-Za-z0-9]{22}$/.test(id || '')) return '';
@@ -356,6 +414,9 @@ const albumCache = new Map();   // cover + collectionId + jaar per album
 const trackCache = new Map();   // tracklist (naam + duur) per collectionId
 let currentRequestId = 0;
 let jsonpCounter = 0;
+let isAlbumExpanded = false;
+let suppressCoverClickUntil = 0;
+let coverAnimation = null;
 let currentAlbum = null; // onthoudt het laatst getoonde album, voor herrenderen bij toggle
 
 function labelFor(a){ return `${a.artist} - ${a.album}`; }
@@ -423,7 +484,9 @@ function renderDropdown(filter){
   dropdownList.classList.add('open');
 }
 
-function selectAlbum(a){
+function selectAlbum(a, direction=0){
+  if(!a) return;
+  isAlbumExpanded=false;
   dropdownList.classList.remove('open');
 
   // Zoekbalk verplaatsen naar de top-bar (sticky boven) en die zichtbaar maken
@@ -436,6 +499,10 @@ function selectAlbum(a){
 
   currentAlbum = a;
   renderAlbum(a);
+  if(direction && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+    const card=albumDisplay.querySelector('.cover-shell');
+    card?.animate?.([{opacity:.3,transform:`translateX(${direction*30}px)`},{opacity:1,transform:'none'}],{duration:340,easing:'ease-out'});
+  }
 
   // Zoekbox weer leegmaken na keuze, klaar voor een nieuwe zoekopdracht
   searchInput.value = '';
@@ -632,7 +699,7 @@ function itunesToCand(r){
     id: r.collectionId,
     artist: r.artistName || '',
     title: r.collectionName || '',
-    coverUrl: r.artworkUrl100 ? r.artworkUrl100.replace('100x100', '600x600') : null,
+    coverUrl: artworkUrl(r.artworkUrl100) || null,
     year: r.releaseDate ? r.releaseDate.slice(0, 4) : null,
     storeUrl: r.collectionViewUrl || '',
     trackCount: r.trackCount || 0
@@ -1031,25 +1098,45 @@ async function renderAlbum(a){
   stopPlayback();
   const albumUrl = spotifyItem('album', a.spotify_id);
 
+  coverAnimation?.cancel();
+  albumDisplay.classList.toggle('expanded',isAlbumExpanded);
   albumDisplay.innerHTML = `
-    <div class="cover-col">
-      <div class="cover-wrap" id="coverWrap"><div class="spinner"></div></div>
-      <div class="release-year" id="releaseYear"></div>
-      <div class="match-info" id="matchInfo"></div>
-      <button class="wrong-btn" id="wrongBtn" type="button" hidden></button>
-    </div>
-    <div class="info">
-      <div class="title-row">
-        <h1 class="album-title">${albumUrl ? `<a href="${albumUrl}" target="_blank" rel="noopener">${esc(a.album)}</a>` : esc(a.album)}</h1>
-        ${albumUrl ? playButton(albumUrl, 'Open album op Spotify') : ''}
+    <div class="album-layout">
+      <div class="cover-shell">
+        <div class="cover-stage">
+          <button type="button" class="album-nav prev" id="prevAlbum" aria-label="Vorig album">‹</button>
+          <button type="button" class="cover-toggle" id="coverToggle" aria-expanded="${isAlbumExpanded}" aria-controls="albumInfo" aria-label="${isAlbumExpanded ? 'Nummers verbergen' : 'Nummers tonen'}: ${esc(a.album)}">
+            <div class="cover-wrap" id="coverWrap"><div class="spinner"></div></div>
+          </button>
+          <button type="button" class="album-nav next" id="nextAlbum" aria-label="Volgend album">›</button>
+        </div>
+        <div class="album-caption">
+          <p class="artist-name">${esc(a.artist)}</p>
+          <h1 class="album-title">${albumUrl ? `<a href="${albumUrl}" target="_blank" rel="noopener">${esc(a.album)}</a>` : esc(a.album)}</h1>
+        </div>
+        <div class="album-meta">
+          <div class="release-year" id="releaseYear"></div>
+          <div class="match-info" id="matchInfo"></div>
+          <button class="wrong-btn" id="wrongBtn" type="button" hidden></button>
+        </div>
       </div>
-      <p class="artist-name">${esc(a.artist)}</p>
-      <ol class="tracklist" id="trackList" style="list-style:none;">
-        <li class="track-loading"><span class="mini-spinner"></span> Tracklijst laden...</li>
-      </ol>
+      <div class="info" id="albumInfo" aria-hidden="${!isAlbumExpanded}" ${isAlbumExpanded ? '' : 'inert'}>
+        <h2 class="tracks-heading">Nummers</h2>
+        <ol class="tracklist" id="trackList">
+          <li class="track-loading"><span class="mini-spinner"></span> Nummers laden…</li>
+        </ol>
+      </div>
     </div>
   `;
+  document.getElementById('coverToggle').onclick=()=>{
+    if(performance.now()<suppressCoverClickUntil)return;
+    toggleAlbumView();
+  };
+  document.getElementById('prevAlbum').onclick=()=>navigateAlbum(-1);
+  document.getElementById('nextAlbum').onclick=()=>navigateAlbum(1);
+  document.getElementById('prevAlbum').disabled=document.getElementById('nextAlbum').disabled=albumsData.length<2;
   mountPlayer();
+  if(a.cover_url) showCover(document.getElementById('coverWrap'),{coverUrl:a.cover_url},a);
 
   let stored;
   try {
@@ -1083,6 +1170,7 @@ function showCover(coverWrap, c, a){
     coverWrap.innerHTML = `<div class="cover-fallback">Geen hoes gevonden<br>${esc(a.artist)}<br>${esc(a.album)}</div>`;
     return;
   }
+  if(coverWrap.querySelector('img')?.dataset.artwork === artworkUrl(c.coverUrl))return;
   // Spinner blijft staan tot de hoes echt binnen is, dan fade-in
   coverWrap.innerHTML = `<div class="spinner"></div><img alt="${esc(a.album)} cover">`;
   const img = coverWrap.querySelector('img');
@@ -1094,10 +1182,16 @@ function showCover(coverWrap, c, a){
     });
   };
   img.addEventListener('load', reveal);
+  let triedFallback=false;
   img.addEventListener('error', () => {
+    const fallback=safeHttps(c.coverUrl);
+    if(!triedFallback && fallback && img.src!==fallback){triedFallback=true;img.src=fallback;return;}
     coverWrap.innerHTML = `<div class="cover-fallback">Hoes kon niet geladen worden<br>${esc(a.artist)}<br>${esc(a.album)}</div>`;
   });
-  img.src = c.coverUrl;
+  img.dataset.artwork=artworkUrl(c.coverUrl);
+  img.src = img.dataset.artwork;
+  img.draggable=false;
+  img.decoding='async';
   if(img.complete && img.naturalWidth) reveal();
 }
 
@@ -1188,6 +1282,59 @@ function renderTracks(a, tracks, key, cover){
   playDisplay={a,tracks,key,cover};
   renderPlayerUI(); updateHighlight();
 }
+
+function toggleAlbumView(){
+  const shell=albumDisplay.querySelector('.cover-shell');
+  const before=shell?.getBoundingClientRect();
+  coverAnimation?.cancel();
+  isAlbumExpanded=!isAlbumExpanded;
+  albumDisplay.classList.toggle('expanded',isAlbumExpanded);
+  const info=document.getElementById('albumInfo');
+  info.inert=!isAlbumExpanded; info.setAttribute('aria-hidden',String(!isAlbumExpanded));
+  const button=document.getElementById('coverToggle');
+  button.setAttribute('aria-expanded',String(isAlbumExpanded));
+  button.setAttribute('aria-label',(isAlbumExpanded?'Nummers verbergen: ':'Nummers tonen: ')+currentAlbum.album);
+  const after=shell?.getBoundingClientRect();
+  if(before && after && shell.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+    coverAnimation=shell.animate([
+      {transform:`translate(${before.left-after.left}px,${before.top-after.top}px) scale(${before.width/after.width})`,transformOrigin:'top left'},
+      {transform:'none',transformOrigin:'top left'}
+    ],{duration:550,easing:'cubic-bezier(.2,.7,.2,1)'});
+  }
+}
+function navigateAlbum(direction){
+  if(!currentAlbum || albumsData.length<2)return;
+  const index=albumsData.findIndex(a=>a.id===currentAlbum.id);
+  const next=(Math.max(index,0)+direction+albumsData.length)%albumsData.length;
+  selectAlbum(albumsData[next],direction);
+}
+let swipeStart=null;
+albumDisplay.addEventListener('touchstart',e=>{
+  swipeStart=null;
+  if(!matchMedia('(max-width:720px)').matches || e.touches.length!==1 || !e.target.closest('.cover-stage'))return;
+  const t=e.touches[0];swipeStart={x:t.clientX,y:t.clientY,time:performance.now(),horizontal:false};
+},{passive:true});
+albumDisplay.addEventListener('touchmove',e=>{
+  if(!swipeStart)return;
+  if(e.touches.length!==1){swipeStart=null;return;}
+  const dx=e.touches[0].clientX-swipeStart.x,dy=e.touches[0].clientY-swipeStart.y;
+  if(Math.abs(dy)>20 && Math.abs(dy)>Math.abs(dx)){swipeStart=null;return;}
+  if(Math.abs(dx)>15 && Math.abs(dx)>Math.abs(dy)*1.4){swipeStart.horizontal=true;if(e.cancelable)e.preventDefault();}
+},{passive:false});
+albumDisplay.addEventListener('touchend',e=>{
+  const start=swipeStart;swipeStart=null;
+  if(!start || !e.changedTouches.length)return;
+  const dx=e.changedTouches[0].clientX-start.x,dy=e.changedTouches[0].clientY-start.y;
+  if(start.horizontal)suppressCoverClickUntil=performance.now()+450;
+  if(Math.abs(dx)<50 || Math.abs(dx)<Math.abs(dy)*1.4 || performance.now()-start.time>1000)return;
+  suppressCoverClickUntil=performance.now()+450;
+  navigateAlbum(dx<0?1:-1);
+},{passive:true});
+albumDisplay.addEventListener('touchcancel',()=>{swipeStart=null;},{passive:true});
+albumDisplay.addEventListener('keydown',e=>{
+  if(!e.target.closest('.cover-stage'))return;
+  if(e.key==='ArrowLeft' || e.key==='ArrowRight'){e.preventDefault();navigateAlbum(e.key==='ArrowLeft'?-1:1);document.getElementById('coverToggle')?.focus();}
+});
 
 // dropdown interactie
 searchInput.addEventListener('focus', () => renderDropdown(searchInput.value));
