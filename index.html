@@ -122,18 +122,20 @@
   .cover-toggle:focus-visible,.album-nav:focus-visible{outline:2px solid var(--green);outline-offset:6px;}
   .cover-wrap{width:100%;aspect-ratio:1;position:relative;overflow:hidden;border-radius:12px;background:#242424;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 48px rgba(0,0,0,.4);}
   .album-caption{padding:22px 4px 0;overflow-wrap:anywhere;}
-  .album-caption .artist-name{font-size:16px;margin:0 0 7px;}
-  .album-caption .album-title{font-size:clamp(22px,3vw,29px);line-height:1.2;font-weight:650;letter-spacing:-.6px;}
+  .album-title-row{display:flex;align-items:center;justify-content:center;gap:9px;}
+  .album-caption .artist-name{font-size:16px;margin:8px 0 0;}
+  .album-caption .album-title{font-size:clamp(22px,3vw,29px);line-height:1.2;font-weight:650;letter-spacing:-.6px;overflow-wrap:anywhere;}
   .album-caption .album-title a{color:inherit;text-decoration:none;}
-  .caption-actions{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;min-height:32px;}
-  .release-year{min-height:0;}
-  .album-play{display:inline-flex;align-items:center;gap:6px;color:var(--green);text-decoration:none;font-size:12px;}
-  .album-play svg{width:24px;height:24px;}
-  .album-play:hover{color:#8af0a6;}
-  .favorite-star{width:36px;height:36px;border:0;background:transparent;padding:0;color:#ffd54f;font:32px/1 system-ui;cursor:pointer;}
+  .caption-actions{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;min-height:26px;}
+  .release-year{min-height:0;color:var(--muted);font-size:inherit;}
+  .album-play{width:30px;height:30px;flex:0 0 30px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--green);color:#121212;text-decoration:none;transition:background .15s,transform .15s;}
+  .album-play svg{width:14px;height:14px;margin-left:2px;}
+  .album-play:hover{background:#1ed760;transform:scale(1.08);}
+  .favorite-star{width:28px;height:28px;border:0;background:transparent;padding:0;color:#ffd54f;font:19px/1 system-ui;cursor:pointer;}
   .favorite-star:hover{transform:scale(1.12);}
   .favorite-star:focus-visible,.favorites-filter:focus-visible{outline:2px solid #ffd54f;outline-offset:3px;}
-  .favorites-filter{width:42px;height:44px;padding:0;flex:0 0 42px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:#ffd54f;font:28px/1 system-ui;}
+  .favorites-filter{width:36px;height:38px;padding:0;flex:0 0 36px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:#ffd54f;font:19px/1 system-ui;}
+  #albumPlayerSlot{width:100%;margin-top:12px;}
   .favorites-filter[aria-pressed="true"]{color:#ffd54f;}
   .album-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;padding:0;border:0;background:transparent;color:#aaa;font-size:34px;line-height:1;cursor:pointer;border-radius:9px;}
   .album-nav:hover{background:#202020;color:#fff;}
@@ -296,7 +298,7 @@
     .album-caption .artist-name{font-size:15px;}
     .album-caption .album-title{font-size:25px;}
     .caption-actions{margin-top:10px;}
-    .favorites-filter{width:42px;flex-basis:42px;}
+    .favorites-filter{width:36px;flex-basis:36px;}
     #albumDisplay.expanded{padding-top:0;}
     #albumDisplay.expanded .album-layout{grid-template-columns:minmax(0,1fr);gap:28px;}
     #albumDisplay.expanded .cover-shell{width:min(100%,350px);}
@@ -972,10 +974,13 @@ function mountPlayer(){
   const list = document.getElementById('trackList');
   const li = play && playDisplay && play.key === playDisplay.key && list
     ? list.querySelector(`li[data-idx="${play.idx}"]`) : null;
-  if(li) li.appendChild(playerEl);
+  const albumSlot=document.getElementById('albumPlayerSlot');
+  if(play && playDisplay && play.key===playDisplay.key && albumSlot && window.matchMedia('(min-width: 721px)').matches) albumSlot.appendChild(playerEl);
+  else if(li) li.appendChild(playerEl);
   else playerEl.remove();
   renderPlayerUI();
 }
+window.addEventListener('resize',()=>{if(play)mountPlayer();});
 function stopPlayback(){
   audio.pause(); audio.removeAttribute('src'); audio.load();
   preloader.removeAttribute('src'); preloader.load();
@@ -1152,14 +1157,16 @@ async function renderAlbum(a){
           <button type="button" class="album-nav next" id="nextAlbum" aria-label="Volgend album">›</button>
         </div>
         <div class="album-caption">
-          <p class="artist-name">${esc(a.artist)}</p>
-          <h1 class="album-title">${esc(a.album)}</h1>
+          <div class="album-title-row">
+            <h1 class="album-title">${esc(a.album)}</h1>
+            <a class="album-play" href="${albumUrl}" target="_blank" rel="noopener" aria-label="Speel ${esc(a.album)} af op Spotify">${playIconSvg}</a>
+          </div>
+          <p class="artist-name">${esc(a.artist)} <span class="release-year" id="releaseYear">${a.release_year ? `(${esc(a.release_year)})` : ''}</span></p>
           <div class="caption-actions">
-            <span class="release-year" id="releaseYear">${esc(a.release_year || '')}</span>
-            <a class="album-play" href="${albumUrl}" target="_blank" rel="noopener" aria-label="Open ${esc(a.album)} op Spotify">${playIconSvg}<span>Spotify</span></a>
             <button class="favorite-star" id="favoriteToggle" type="button" aria-label="${favoriteIds.has(a.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}" aria-pressed="${favoriteIds.has(a.id)}" title="${favoriteIds.has(a.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}">${favoriteIds.has(a.id) ? '★' : '☆'}</button>
           </div>
         </div>
+        <div id="albumPlayerSlot"></div>
         <div class="album-meta">
           <div class="match-info" id="matchInfo"></div>
           <button class="wrong-btn" id="wrongBtn" type="button" hidden></button>
@@ -1196,7 +1203,7 @@ async function renderAlbum(a){
   if(requestId !== currentRequestId) return;
   if(stored.length){
     showCover(document.getElementById('coverWrap'), {coverUrl:safeHttps(a.cover_url)}, a);
-    document.getElementById('releaseYear').textContent=a.release_year || document.getElementById('releaseYear').textContent;
+    if(a.release_year)document.getElementById('releaseYear').textContent=`(${a.release_year})`;
     document.getElementById('matchInfo').textContent='Uit je collectie';
     showStoreLink(a.itunes_url);
     renderTracks(a, stored.map(t=>({name:t.title,artist:t.artist,durationMs:t.duration_ms,previewUrl:safeHttps(t.preview_url),spotify_id:t.spotify_id,storeUrl:t.itunes_url,source:'itunes'})), 'db:'+a.id, safeHttps(a.cover_url));
@@ -1272,7 +1279,8 @@ async function showCandidate(a, cands, idx, tried){
   if(requestId !== currentRequestId) return;
 
   showCover(coverWrap, {...c, coverUrl:safeHttps(a.cover_url) || safeHttps(c.coverUrl)}, a);
-  releaseYearEl.textContent = a.release_year || c.year || '';
+  const year=a.release_year || c.year;
+  releaseYearEl.textContent = year ? `(${year})` : '';
   showStoreLink(c.storeUrl);
   matchInfo.textContent = `Automatisch gevonden: ${c.artist} – ${c.title}`;
 
