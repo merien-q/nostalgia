@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CD Nostalgia</title>
+<style>
+  :root{
+    --bg:#121212;
+    --panel:#181818;
+    --panel2:#202020;
+    --green:#1DB954;
+    --text:#f5f5f5;
+    --muted:#9b9b9b;
+    --border:#2a2a2a;
+  }
+  *{box-sizing:border-box;}
+  html, body{ height:100%; }
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+  }
+  .app{
+    max-width:860px; margin:0 auto; padding:24px 16px 50px;
+    min-height:100vh; display:flex; flex-direction:column;
+  }
+
+  .top-bar{
+    display:none;
+    position:sticky; top:0; background:var(--bg);
+    padding:4px 0 14px; z-index:10;
+  }
+  .top-bar.visible{ display:block; }
+
+  .app-toggle-row{
+    display:flex; align-items:center; justify-content:flex-end;
+    gap:8px; margin-bottom:12px; font-size:12px; color:var(--muted);
+  }
+  .app-toggle-row label{
+    display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;
+  }
+  .app-toggle-row input{ cursor:pointer; accent-color: var(--green); width:14px; height:14px; }
+
+  .search-row{ display:flex; gap:10px; align-items:flex-start; width:100%; }
+  .search-wrap{ position:relative; flex:1; }
+  #searchInput{
+    width:100%; padding:14px 16px; font-size:16px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel2); color:var(--text); outline:none;
+  }
+  #searchInput:focus{ border-color:var(--green); }
+
+  .action-btn{
+    padding:14px 18px; border-radius:8px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-size:14px; cursor:pointer;
+    white-space:nowrap; transition:border-color .15s, color .15s, background .15s;
+  }
+  .action-btn:hover{ border-color:var(--green); color:var(--green); }
+  .random-btn{
+    background:var(--green); color:#121212; border:none; font-weight:600;
+  }
+  .random-btn:hover{ background:#1ed760; color:#121212; }
+
+  .dropdown-list{
+    position:absolute; top:calc(100% + 6px); left:0; right:0;
+    background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+    max-height:360px; overflow-y:auto; display:none;
+    box-shadow:0 10px 30px rgba(0,0,0,.5); z-index:20;
+  }
+  .dropdown-list.open{ display:block; }
+  .dropdown-item{ padding:12px 16px; cursor:pointer; border-bottom:1px solid var(--border); font-size:14px; }
+  .dropdown-item:last-child{ border-bottom:none; }
+  .dropdown-item:hover, .dropdown-item.active{ background:#2a2a2a; }
+  .dropdown-item b{ color:var(--green); }
+  .dropdown-empty{ padding:14px 16px; color:var(--muted); font-size:14px; }
+  .dropdown-count{
+    padding:8px 16px; font-size:11px; color:var(--muted);
+    border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--panel2);
+  }
+
+  .home-stage{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:20px 10px;
+  }
+  .main-title{
+    margin:0;
+    font-size:clamp(34px, 8vw, 56px);
+    font-weight:800;
+    letter-spacing:-1px;
+    line-height:1;
+  }
+  .main-title .cd-emoji{
+    font-size:1em;
+    line-height:1;
+    vertical-align:-0.08em;
+    display:inline-block;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:clamp(15px, 3vw, 18px);
+    margin:14px 0 0;
+    font-weight:400;
+  }
+  .home-stage .search-row{
+    margin-top:40px;
+    max-width:560px;
+  }
+
+  #albumDisplay{
+    margin-top:28px; background:var(--panel); border-radius:12px;
+    padding:28px; display:none; gap:28px; flex-wrap:wrap;
+  }
+  #albumDisplay.visible{ display:flex; }
+
+  .cover-col{
+    display:flex; flex-direction:column; align-items:center;
+    gap:8px; width:260px; min-width:260px;
+  }
+  .cover-wrap{
+    width:260px; height:260px; min-width:260px; border-radius:10px;
+    overflow:hidden; background:#2a2a2a; display:flex;
+    align-items:center; justify-content:center;
+    box-shadow:0 10px 28px rgba(0,0,0,.45); position:relative;
+  }
+  .cover-wrap .spinner{ position:absolute; }
+  .cover-wrap img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
+    opacity:0; transform:translateY(12px) scale(.96);
+    transition:opacity .4s ease-out, transform .45s cubic-bezier(.2,.7,.2,1);
+  }
+  .cover-wrap img.loaded{ opacity:1; transform:none; }
+  @media (prefers-reduced-motion: reduce){
+    .cover-wrap img{ transform:none; transition:opacity .2s linear; }
+  }
+  .cover-fallback{ font-size:13px; color:var(--muted); text-align:center; padding:12px; }
+  .spinner{
+    width:30px; height:30px; border:3px solid #3a3a3a;
+    border-top-color:var(--green); border-radius:50%; animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .release-year{ font-size:12px; color:var(--muted); min-height:14px; }
+
+  .match-info{ font-size:11px; color:var(--muted); text-align:center; line-height:1.4; min-height:14px; }
+  .wrong-btn{
+    background:none; border:1px solid var(--border); color:var(--muted);
+    font-size:12px; padding:6px 10px; border-radius:6px; cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .wrong-btn:hover{ border-color:var(--green); color:var(--green); }
+
+  .player{
+    width:100%; margin-top:6px; background:var(--panel2); border:1px solid var(--border);
+    border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;
+  }
+  .player[hidden]{ display:none; }
+  .player .np{
+    font-size:12px; color:var(--text); text-align:center; min-height:16px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .player-note{ font-size:10px; color:var(--muted); text-align:center; line-height:1.4; }
+  .seek-row{
+    display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  .seek-row input[type=range]{ flex:1; min-width:0; accent-color:var(--green); cursor:pointer; }
+  .controls{ display:flex; align-items:center; justify-content:center; gap:14px; }
+  .ctl-btn{
+    background:none; border:none; color:var(--text); cursor:pointer; padding:0;
+    width:36px; height:36px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:color .15s, background .15s;
+  }
+  .ctl-btn:hover{ color:var(--green); }
+  .ctl-btn svg{ width:20px; height:20px; }
+  .ctl-btn.main{ background:var(--green); color:#121212; width:44px; height:44px; }
+  .ctl-btn.main:hover{ background:#1ed760; color:#121212; }
+  .tracklist li.playing .track-link, .tracklist li.playing .track-num{ color:var(--green); }
+
+  .info{ flex:1; min-width:240px; }
+  .title-row{ display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap; }
+  .album-title{ font-size:27px; font-weight:700; margin:0; line-height:1.2; }
+  .album-title a{ color:var(--text); text-decoration:none; }
+  .album-title a:hover{ color:var(--green); text-decoration:underline; }
+  .artist-name{ color:var(--muted); font-size:16px; margin:0 0 18px; }
+
+  .play-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; min-width:26px; border-radius:50%;
+    background:var(--green); color:#121212; text-decoration:none;
+    font-size:11px; flex-shrink:0; transition:transform .15s, background .15s;
+  }
+  .play-btn:hover{ background:#1ed760; transform:scale(1.08); }
+  .play-btn svg{ width:11px; height:11px; margin-left:1px; }
+
+  .tracklist{ list-style:none; margin:0; padding:0; border-top:1px solid var(--border); min-height:40px; }
+  .tracklist li{
+    padding:9px 0; border-bottom:1px solid var(--border);
+    font-size:14px; display:flex; align-items:center; gap:12px;
+  }
+  .track-num{ color:var(--muted); min-width:18px; font-size:13px; }
+  .tracklist a.track-link{ color:var(--text); text-decoration:none; flex:1; }
+  .tracklist a.track-link:hover{ color:var(--green); text-decoration:underline; }
+  .track-duration{ color:var(--muted); font-size:12px; min-width:36px; text-align:right; }
+  .track-loading{ color:var(--muted); font-size:13px; padding:12px 0; display:flex; align-items:center; gap:10px; }
+  .track-loading .mini-spinner{
+    width:16px; height:16px; border:2px solid #3a3a3a;
+    border-top-color:var(--green); border-radius:50%; animation:spin 0.8s linear infinite;
+  }
+  .track-error{ color:var(--muted); font-size:13px; padding:12px 0; }
+  footer{ text-align:center; color:var(--muted); font-size:12px; margin-top:40px; line-height:1.6; }
+
+  @media (max-width: 640px){
+    .app{ padding:16px 14px 40px; }
+
+    .main-title{ font-size: clamp(30px, 11vw, 44px); }
+    .subtitle{ font-size:16px; }
+    .home-stage .search-row{ margin-top:30px; }
+
+    .search-row{ flex-wrap:wrap; }
+    .search-wrap{ flex:1 1 100%; }
+    .action-btn{ flex:1 1 auto; font-size:15px; padding:13px 16px; }
+
+    .dropdown-item{ font-size:15px; padding:14px 16px; }
+    .dropdown-empty{ font-size:14px; }
+
+    #albumDisplay{ padding:20px; gap:20px; justify-content:center; }
+    .cover-col{ width:100%; max-width:260px; }
+    .cover-wrap{ width:100%; max-width:260px; height:auto; aspect-ratio:1/1; min-width:0; }
+    .info{ min-width:0; width:100%; }
+
+    .album-title{ font-size:23px; }
+    .artist-name{ font-size:15px; }
+
+    .tracklist li{ font-size:15px; padding:11px 0; gap:10px; }
+    .track-duration{ font-size:13px; min-width:32px; }
+    .play-btn{ width:30px; height:30px; }
+    .play-btn svg{ width:13px; height:13px; }
+
+    footer{ font-size:12px; padding:0 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div id="topBar" class="top-bar">
+    <div class="app-toggle-row">
+      <label>
+        <input type="checkbox" id="appModeToggle">
+        Open in Spotify-app (i.p.v. browser)
+      </label>
+    </div>
+    <div id="topSearchRow"></div>
+  </div>
+
+  <div id="homeStage" class="home-stage">
+    <h1 class="main-title">CD <span class="cd-emoji">💿</span> Nostalgia</h1>
+    <p class="subtitle">Merien's collectie</p>
+    <div id="homeSearchRow"></div>
+  </div>
+
+  <main id="albumDisplay"></main>
+
+  <footer>
+    Albumhoes, releasejaar, speelduur &amp; tracklijst worden automatisch opgehaald via iTunes (met Deezer als reserve). Previews van 30 seconden; het hele nummer opent in Spotify.
+  </footer>
+</div>
+
+<div class="search-row" id="searchRow">
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Zoek artiest of album..." autocomplete="off">
+    <div id="dropdownList" class="dropdown-list"></div>
+  </div>
+  <button id="randomBtn" class="action-btn random-btn" type="button">Random</button>
+</div>
+
+<script>
+/* ============================================================
+   DATA
+   ------------------------------------------------------------
+   PLAK HIER EENVOUDIG EEN NIEUWE LIJST BIJ: elke regel in het
+   formaat "Artiest - Album". Dit is exact het format dat je
+   al gebruikt — gewoon toevoegen, geen verdere opmaak nodig.
+   ============================================================ */
+
+const albumsRaw = `
+A.R. Rahman - Bombay Dreams
+Above the Law - Black Mafia Life
+Adam F - Colours
+Air - LateNightTales
+Air - Moon Safari
+Alice in Chains - Live
+Aphrodite - Aphrodite
+Atlas Shrugged - Ninth Annual World's First
+Bad Brains - Rise
+Badly Drawn Boy - About a Boy
+Beastie Boys - Check Your Head
+Beastie Boys - Ill Communication
+Beastie Boys - Licensed to Ill
+Beastie Boys - Paul's Boutique
+Beastie Boys - Some Old Bullshit
+Beastie Boys - To the 5 Boroughs
+Belle & Sebastian - LateNightTales
+Ben Harper & The Blind Boys of Alabama - There Will Be a Light
+Ben Harper & The Innocent Criminals - Burn to Shine
+Big Youth - The Chanting Dread Inna Fine Style
+Biohazard - Tales from the Hard Side
+Biohazard - Urban Discipline
+Björk - Post
+Black Uhuru - Liberation: The Island Anthology
+Blame - Logical Progression Level 2
+Blink-182 - Dude Ranch
+Blink-182 - The Mark, Tom and Travis Show (The Enema Strikes Back!)
+Bloem de Ligny - Zink
+Blur - Parklife
+Bob Marley - The Very Best of the Early Years 1969–74
+Bob Marley & The Wailers - Catch a Fire
+Bob Marley & The Wailers - Confrontation
+Bob Marley & The Wailers - Exodus
+Booka Shade - DJ-Kicks
+Bran Van 3000 - Discosis
+Buraka Som Sistema - FabricLive.49
+Burning Spear - Calling Rastafari
+Burning Spear - Dry & Heavy
+Burning Spear - Live in Paris
+Buscemi - Camino Real
+Bush - Golden State
+Bush - Razorblade Suitcase
+Bush - Sixteen Stone
+Bush - The Science of Things
+Butthole Surfers - Independent Worm Saloon
+Chuck Carbo - Hey, Mardi Gras! (Here I Am)
+Claw Boys Claw - Sugar
+Colder - Again
+Corrosion of Conformity - Albatross
+Counting Crows - Hard Candy
+Da Lench Mob - Guerillas in tha Mist
+Daft Punk - Discovery
+Daft Punk - Homework
+Depeche Mode - Exciter
+Depeche Mode - Playing the Angel
+Depeche Mode - Ultra
+Dimitri from Paris - Monsieur Dimitri's De-Luxe House of Funk
+Dimitri from Paris - My Salsoul
+Disappear Fear - Skin / B.Y.O.G.
+DJ Shadow - Diminishing Returns
+Doe Maar - Het Afscheidsconcert
+Doe Maar - Klaar
+Downset - Downset
+Drown - Hold On to the Hollow
+Drowning Boats - Hot Dog
+Dub War - Wrong Side of Beautiful
+Duran Duran - Big Thing
+Eat Static - In the Nude!
+Eboman - Donuts with Buddah
+Eels - Beautiful Freak
+Eels - Souljacker
+Elastica - Elastica
+Elliott Smith - XO
+Eminem - The Marshall Mathers LP
+Extince - 2e Jeugd
+Extince - Binnenlandse Funk
+Extince - Viervoeters
+Extince - Vitamine E
+Fatboy Slim - Better Living Through Chemistry
+Fatboy Slim - LateNightTales
+Fatboy Slim - Live on Brighton Beach
+Fatboy Slim - On the Floor at the Boutique
+Fila Brazillia - Another Fine Mess
+Fila Brazillia - AnotherLateNight
+Filter - Short Bus
+Fish - The Complete BBC Sessions
+Fishbone - Give a Monkey a Brain and He'll Swear He's the Center of the Universe
+Fishbone - The Reality of My Surroundings
+Floris - Floris
+Foo Fighters - There Is Nothing Left to Lose
+Four Tet - LateNightTales
+Freaky Fukin Weirdoz - Senseless Wonder
+G. Love & Special Sauce - G. Love & Special Sauce
+Gorillaz - Gorillaz
+Groove Armada - AnotherLateNight
+Grooverider - Grooverider Presents: The Prototype Years
+Guru - Jazzmatazz, Volume II: The New Reality
+Hans Teeuwen - Dat Dan Weer Wel
+Hans Teeuwen - Industry of Love
+Hans Teeuwen - Met een Breierdeck
+Hans Teeuwen - Trui
+Hed PE - Broke
+Henrik Schwarz - Live
+Herman Finkers - Als Gezonde Jongen Zijnde
+Howie B - AnotherLateNight
+Huey Morgan - Planet Groove
+Ice Cube - Greatest Hits
+Ice-T - Home Invasion
+Iggy Pop - Best Of… Live
+Incubus - Enjoy Incubus
+Infadels - We Are Not the Infadels
+Infectious Grooves - Gorillaz
+Infectious Grooves - Mas Borracho
+Jamiroquai - LateNightTales
+Jane's Addiction - Ritual de lo Habitual
+Jango Edwards - De 21 Grootste Successen
+Jeff Buckley - Grace
+Jimi Hendrix - Blues
+Jimi Hendrix Experience - Radio One
+Jimmy Cliff - Wonderful World
+Josh Wink - Sessions
+Kid Koala - Your Mom's Favorite DJ
+Kid Loco - AnotherLateNight
+Kosheen - Kokopelli
+Krust - Coded Language
+Lange Frans & Baas B - Supervisie
+Lee Perry - Scratch Attack
+Lee Perry - The Upsetter
+Leftfield - Rhythm and Stealth: Phat Planet / Higher Ground
+Leij Buken - Journey Rewards
+Lenny Kravitz - Are You Gonna Go My Way
+Les Quatre Jules - On la joue couché… des Frères Jacques
+Letters to Cleo - Aurora Gory Alice
+Life of Agony - River Runs Red
+Life of Agony - Soul Searching Sun
+Life of Agony - Ugly
+Live - Secret Samadhi
+Live - Throwing Copper
+Living Colour - Stain
+Living Colour - Time's Up
+Mad Season - Above
+Madlib - Shades of Blue
+Madness - The Harder They Come
+Madonna - Ray of Light
+Madvillain - Madvillainy
+Massive Attack - Mezzanine
+Masters of Reality - Masters of Reality
+Metal Molly - Surgery for Zebra
+Metallica - …And Justice for All
+Moby - Play
+N.E.R.D - In Search Of…
+Nailbomb - Point Blank
+Naughty by Nature - Poverty's Paradise
+Nick Cave & The Bad Seeds - No More Shall We Part
+Nick Cave & The Bad Seeds - The Best Of
+Nightmares on Wax - LateNightTales
+Nine Inch Nails - "The Perfect Drug" Versions
+Nine Inch Nails - Broken
+Nine Inch Nails - Fixed
+Nine Inch Nails - Further Down the Spiral
+Nine Inch Nails - Pretty Hate Machine
+Nine Inch Nails - The Downward Spiral
+Nine Inch Nails - Things Falling Apart
+Nirvana - In Utero
+NOFX - Punk in Drublic
+Orbital - The Altogether
+Osdorp Posse - Vlijmscherp
+OutKast - Aquemini
+OutKast - Idlewild
+Pantera - Far Beyond Driven
+Pantera - Vulgar Display of Power
+Pearl Jam - Immortality
+Pearl Jam - Not for You
+Pearl Jam - Spin the Black Circle
+Pearl Jam - Yield
+Peplab - Drive
+Phil Pratt - The Phil Pratt Thing
+Pink Martini - Hey Eugene!
+Pixies - Surfer Rosa & Come On Pilgrim
+Placebo - Once More with Feeling: Singles 1996–2004
+Poet and the Roots - Dread Beat an' Blood
+Postmen - Documents
+Prefuse 73 - One Word Extinguisher
+Primus - Animals Should Not Try to Act Like People
+Primus - Antipop
+Primus - Frizzle Fry
+Primus - Miscellaneous Debris
+Primus - Pork Soda
+Primus - Rhinoplasty
+Primus - Sailing the Seas of Cheese
+Primus - Suck on This
+Prong - Cleansing
+Prong - Prove You Wrong
+Public Enemy - Times Up! 20 Greatest Hits
+R.E.M. - Monster
+Radiohead - Kid A
+Rage Against the Machine - Bullet in the Head
+Rage Against the Machine - Rage Against the Machine
+Red Hot Chili Peppers - Californication
+Red Hot Chili Peppers - Freaky Styley
+Red Hot Chili Peppers - One Hot Minute
+Red Snapper - Our Aim Is to Satisfy
+Rein Mercha - 't Is Oent, de Droom
+Rollins Band - Weight
+Senser - Stacked Up
+Sepultura - Chaos A.D.
+Sepultura - Hatred
+Sepultura - Roots
+Shaun Ryder - Planet Groove
+Sid - Túneo
+Skip the Rush - All Is Fit for Tonight
+Slash's Snakepit - It's Five O'Clock Somewhere
+Sly & Robbie - Joy Ride
+Sly & Robbie - LateNightTales
+Soundgarden - Down on the Upside
+Soundgarden - Superunknown
+Spearhead - Home
+St Germain - Tourist
+Staind - Break the Cycle
+Stanton Warriors - The Stanton Session
+Stéphane Pompougnac - Hôtel Costes 5
+Stéphane Pompougnac - Hôtel Costes Quatre
+Sublime - Sublime
+Suicidal Tendencies - Still Cyco After All These Years
+Supergrass - Supergrass
+Talking Heads - Stop Making Sense
+Teeuwen & Smeenk - Heist
+Tété - Par Monts et Vallons
+The Beach Boys - Christmas Album
+The Breeders - Last Splash
+The Chemical Brothers - Block Rockin' Beats
+The Chemical Brothers - Come with Us
+The Chemical Brothers - Dig Your Own Hole
+The Cult - The Singles 1984–1995
+The D.O.C. - No One Can Do It Better
+The Darkness - Permission to Land
+The Flaming Lips - LateNightTales
+The Gladiators - Dreadlocks the Time Is Now
+The Glimmers - FabricLive.31
+The Goats - No Goats, No Glory
+The Orb - Cydonia
+The Orb - Live 93
+The Orb - The Orb's Adventures Beyond the Ultraworld
+The Presidents of the United States of America - The Presidents of the United States of America
+The Prodigy - The Fat of the Land
+The Raconteurs - Broken Boy Soldiers
+The Rolling Stones - Hot Rocks 1
+The Smashing Pumpkins - MACHINA/The Machines of God
+The Smashing Pumpkins - Mellon Collie and the Infinite Sadness
+The Soundtrack of Our Lives - Behind the Music
+The Stone Roses - Second Coming
+The Stone Roses - The Complete Stone Roses
+The White Stripes - De Stijl
+The White Stripes - Elephant
+The White Stripes - White Blood Cells
+Therion - Theli
+Tommy Guerrero - AnotherLateNight
+Tony Touch - The Piece Maker
+Tool - Opiate
+Tool - Undertow
+Toots & The Maytals - True Love
+Travis - The Invisible Band
+Typhoon - Tussen Licht en Lucht
+U2 - All That You Can't Leave Behind
+Underworld - A Hundred Days Off
+Underworld - Beaucoup Fish
+Underworld - Oblivion with Bells
+Underworld - Pearl's Girl
+Urban Dance Squad - Grand Black Citizen
+VanVelzen - Take Me In & Hear Me Out
+Various - SuperFunk.
+Various artists- 2 Meter Sessies, Volume 1
+Various artists- Chillout in Ibiza
+Various artists- Christmas Greatest
+Various artists- City of God
+Various artists- Coldharbour Rocks
+Various artists- Day Tripper
+Various artists- Demon Knight
+Various artists- Denksport Zomerhits
+Various artists- Donnie Darko
+Various artists- Drum & Bass Selection 4
+Various artists- Eenmaal Andermaal
+Various artists- Ein Abend in Wien
+Various artists- Goa' Berlin 2001
+Various artists- Goal!
+Various artists- Help: A Day in the Life
+Various artists- Judgment Night
+Various artists- Kinky Reggae, Volume One
+Various artists- La Chica de Ipanema
+Various artists- Leave Them All Behind 2
+Various artists- Little Miss Sunshine
+Various artists- Mad for It
+Various artists- Nu Sounds: Slow Future Melange Showcase
+Various artists- Pinkpop Sampler 1998
+Various artists- Planet V
+Various artists- Q Covered: The Eighties
+Various artists- Roots of Dub Funk
+Various artists- Spectacular Classics
+Various artists- Spider-Man: Music from and Inspired By
+Various artists- Survival of the Fattest
+Various artists- The Acid House
+Various artists- The Best of Blaxploitation
+Various artists- The Royal Tenenbaums
+Various artists- Tropicália
+Various artists- Voyage to Planet Dog
+Various artists- Yabba-Dabba-Dance! Greatest Hits 1995
+Yonderboi - Shallow and Profound
+Young Black Teenagers - Dead Enz Kidz Doin' Lifetime Bidz
+Zero 7 - AnotherLateNight
+Zero 7 - Simple Things
+Zoom - Helium Octipede
+`;
+
+/* ==PARSE-START== */
+// Parseert het tekstblok naar { artist, album } objecten.
+// Ondersteunt "Artiest - Album" én regels zonder spatie voor het streepje
+// (zoals "Various artists- Titel").
+const albumsData = albumsRaw
+  .split('\n')
+  .map(line => line.trim())
+  .filter(line => line.length > 0)
+  .map(line => {
+    let idx = line.indexOf(' - ');
+    let sepLen = 3;
+    if(idx === -1){
+      idx = line.indexOf('-');
+      sepLen = 1;
+    }
+    if(idx <= 0) return null;
+    const artist = line.slice(0, idx).trim();
+    const album = line.slice(idx + sepLen).trim();
+    if(!artist || !album) return null;
+    return { artist, album };
+  })
+  .filter(Boolean);
+/* ==PARSE-END== */
+
+/* ============================================================
+   LOGICA — hoeft niet aangepast te worden bij het toevoegen
+   van albums
+   ============================================================ */
+
+const searchRowEl = document.getElementById('searchRow');
+const homeSearchRow = document.getElementById('homeSearchRow');
+const topSearchRow = document.getElementById('topSearchRow');
+const topBar = document.getElementById('topBar');
+const homeStage = document.getElementById('homeStage');
+
+const searchInput = document.getElementById('searchInput');
+const dropdownList = document.getElementById('dropdownList');
+const albumDisplay = document.getElementById('albumDisplay');
+const randomBtn = document.getElementById('randomBtn');
+const appModeToggle = document.getElementById('appModeToggle');
+
+const albumCache = new Map();   // cover + collectionId + jaar per album
+const trackCache = new Map();   // tracklist (naam + duur) per collectionId
+let currentRequestId = 0;
+let jsonpCounter = 0;
+let currentAlbum = null; // onthoudt het laatst getoonde album, voor herrenderen bij toggle
+
+function labelFor(a){ return `${a.artist} - ${a.album}`; }
+
+/* ------------------------------------------------------------
+   Spotify-app vs. browser toggle
+   ------------------------------------------------------------
+   'app'  -> spotify:search:<query>   (opent de Spotify-app direct,
+             werkt alleen als de app geïnstalleerd is)
+   'web'  -> https://open.spotify.com/search/<query>  (opent in browser,
+             werkt altijd, ook zonder geïnstalleerde app)
+   ------------------------------------------------------------ */
+function getLinkMode(){
+  return localStorage.getItem('cdNostalgiaLinkMode') || 'web';
+}
+function setLinkMode(mode){
+  localStorage.setItem('cdNostalgiaLinkMode', mode);
+}
+function spotifySearchUrl(query){
+  const mode = getLinkMode();
+  if(mode === 'app'){
+    return `spotify:search:${encodeURIComponent(query)}`;
+  }
+  return `https://open.spotify.com/search/${encodeURIComponent(query)}`;
+}
+
+function formatDuration(ms){
+  if(!ms || ms <= 0) return '';
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2,'0')}`;
+}
+
+const playIconSvg = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+
+function playButton(url, title){
+  return `<a class="play-btn" href="${url}" target="_blank" rel="noopener" title="${title}" aria-label="${title}">${playIconSvg}</a>`;
+}
+
+function renderDropdown(filter){
+  const q = filter.trim().toLowerCase();
+  const matches = albumsData.filter(a => labelFor(a).toLowerCase().includes(q));
+  dropdownList.innerHTML = '';
+
+  const countDiv = document.createElement('div');
+  countDiv.className = 'dropdown-count';
+  countDiv.textContent = `${matches.length} album${matches.length === 1 ? '' : 's'}`;
+  dropdownList.appendChild(countDiv);
+
+  if(matches.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'dropdown-empty';
+    empty.textContent = 'Geen resultaten';
+    dropdownList.appendChild(empty);
+  } else {
+    matches.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'dropdown-item';
+      div.innerHTML = `${a.artist} - <b>${a.album}</b>`;
+      div.addEventListener('click', () => selectAlbum(a));
+      dropdownList.appendChild(div);
+    });
+  }
+  dropdownList.classList.add('open');
+}
+
+function selectAlbum(a){
+  dropdownList.classList.remove('open');
+
+  // Zoekbalk verplaatsen naar de top-bar (sticky boven) en die zichtbaar maken
+  topSearchRow.appendChild(searchRowEl);
+  topBar.classList.add('visible');
+
+  // Homepage verbergen, albumweergave tonen
+  homeStage.style.display = 'none';
+  albumDisplay.classList.add('visible');
+
+  currentAlbum = a;
+  renderAlbum(a);
+
+  // Zoekbox weer leegmaken na keuze, klaar voor een nieuwe zoekopdracht
+  searchInput.value = '';
+}
+
+/* ------------------------------------------------------------
+   JSONP helper (CORS-vrij, werkt ook via file://)
+   ------------------------------------------------------------ */
+function jsonp(url){
+  return new Promise((resolve, reject) => {
+    const callbackName = `jsonpCb_${Date.now()}_${jsonpCounter++}`;
+    const script = document.createElement('script');
+
+    let timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('JSONP timeout'));
+    }, 8000);
+
+    function cleanup(){
+      clearTimeout(timeoutId);
+      delete window[callbackName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callbackName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('JSONP script load error')); };
+    script.src = `${url}&callback=${callbackName}`;
+    document.body.appendChild(script);
+  });
+}
+
+/* ------------------------------------------------------------
+   Handmatige correcties
+   ------------------------------------------------------------
+   Gaat een album toch nog fout? Zet het hier vast. De sleutel is
+   exact zoals het in de lijst staat ("Artiest - Album").
+   Waarde: { itunes: <collectionId> } of { deezer: <albumId> }.
+   - iTunes-id: het getal na "/id" in een music.apple.com-albumlink
+   - Deezer-id: het getal in een deezer.com/album/<id> link
+   ------------------------------------------------------------ */
+const manualOverrides = {
+  // "Air - LateNightTales": { itunes: 123456789 },
+  // "Various artists- Planet V": { deezer: 123456789 },
+};
+
+/* ------------------------------------------------------------
+   Matching-logica
+   ------------------------------------------------------------
+   1. Meerdere zoekopdrachten tegelijk (iTunes, daarna zo nodig Deezer)
+   2. Elke kandidaat zelf scoren op titel én artiest
+   3. Edities ("Remastered", "Deluxe") negeren, tribute/karaoke afstraffen
+   4. Kandidaten die niet écht kloppen worden weggegooid
+   5. Bij gelijke score wint de oudste (originele) uitgave
+   6. "Verkeerd album?"-knop laat je door de beste alternatieven bladeren
+   ------------------------------------------------------------ */
+
+/* ==MATCH-START== */
+const EDITION_RE = /re-?master|deluxe|expanded|anniversar|bonus|explicit|reissue|special|collector|legacy|edition|digital|\bmono\b|\bstereo\b/i;
+const JUNK_RE = /\b(tribute|karaoke|lullaby|instrumental|made famous|originally performed|in the style of|cover version|workout|piano version|string quartet|8 bit)\b/;
+
+function isVarious(artist){ return /^various/i.test(artist || ''); }
+
+// lowercase, geen accenten, geen leestekens, "&" = "and"
+function normalize(str){
+  return (str || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+// Haalt editie-toevoegsels weg: "(Remastered)", "[Deluxe Edition]", " - 2011 Remaster"
+function cleanTitle(t){
+  let s = t || '';
+  s = s.replace(/[\(\[][^\)\]]*[\)\]]/g, m => EDITION_RE.test(m) ? ' ' : m);
+  s = s.replace(/\s[-–—]\s.*(remaster|deluxe|edition|expanded|anniversary|bonus|reissue).*$/i, ' ');
+  return s;
+}
+
+function artistTokens(a){
+  return normalize(a).split(' ').filter(t => t && t !== 'the');
+}
+
+function artistScore(candArtist, targetArtist){
+  const A = artistTokens(candArtist), B = artistTokens(targetArtist);
+  if(!A.length || !B.length) return 0;
+  const setB = new Set(B);
+  let inter = 0;
+  for(const t of new Set(A)){ if(setB.has(t)) inter++; }
+  const union = new Set([...A, ...B]).size;
+  const jaccard = union ? inter / union : 0;
+  const overlap = inter / Math.min(new Set(A).size, setB.size);
+  return Math.max(jaccard, overlap * 0.9);
+}
+
+// Titelmatch. Behandelt ook "LateNightTales: Air" tegenover "LateNightTales"
+// (artiestnaam in de titel) en "FabricLive.49" tegenover "Fabric Live 49".
+function titleScore(candTitle, target, artist){
+  const ct = normalize(cleanTitle(candTitle));
+  const tt = normalize(cleanTitle(target));
+  if(!ct || !tt) return 0;
+  const compactT = tt.replace(/ /g, '');
+  if(ct === tt || ct.replace(/ /g, '') === compactT) return 1;
+
+  const calc = (str) => {
+    const A = new Set(str.split(' ')), B = new Set(tt.split(' '));
+    let inter = 0;
+    for(const x of A){ if(B.has(x)) inter++; }
+    const union = A.size + B.size - inter;
+    let s = union ? inter / union : 0;
+    const small = Math.min(A.size, B.size);
+    if(small >= 2 && inter === small) s = Math.max(s, 0.8); // titel zit volledig in de ander
+    return s;
+  };
+
+  let best = calc(ct);
+  const at = new Set(artistTokens(artist));
+  const rest = ct.split(' ').filter(x => !at.has(x)).join(' ');
+  if(rest && rest !== ct){
+    if(rest.replace(/ /g, '') === compactT) best = Math.max(best, 0.95);
+    else best = Math.max(best, calc(rest) * 0.95);
+  }
+  return best;
+}
+
+function candKey(c){ return `${c.source}:${c.id}`; }
+
+// Scoort, filtert en sorteert kandidaten. Geeft maximaal 8 terug.
+function rankCandidates(cands, artist, album){
+  const various = isVarious(artist);
+  const targetNorm = normalize(album);
+  const aTokens = new Set(artistTokens(artist));
+  const out = [];
+  const seen = new Set();
+
+  for(const c of cands){
+    if(!c || !c.id) continue;
+    const key = candKey(c);
+    if(seen.has(key)) continue;
+    seen.add(key);
+
+    const tScore = titleScore(c.title, album, artist);
+    if(tScore < (various ? 0.75 : 0.6)) continue;
+
+    let aScore;
+    if(various){
+      aScore = /various/i.test(c.artist || '') ? 1 : 0.5;
+    } else {
+      aScore = artistScore(c.artist, artist);
+      // Compilatie als "Various Artists" waarvan de titel de artiest noemt
+      if(aScore < 0.5 && /various/i.test(c.artist || '')){
+        const titleTokens = new Set(normalize(c.title).split(' '));
+        const artistInTitle = aTokens.size > 0 && [...aTokens].every(t => titleTokens.has(t));
+        if(artistInTitle) aScore = 0.6;
+      }
+      if(aScore < 0.5) continue;
+    }
+
+    let score = various ? tScore * 0.85 + aScore * 0.15 : tScore * 0.7 + aScore * 0.3;
+
+    const candText = normalize(c.title) + ' ' + normalize(c.artist);
+    if(JUNK_RE.test(candText) && !JUNK_RE.test(targetNorm)) score -= 0.4;
+
+    c.score = score;
+    out.push(c);
+  }
+
+  out.sort((x, y) => {
+    if(Math.abs(x.score - y.score) > 0.03) return y.score - x.score;
+    const yx = parseInt(x.year, 10) || 9999;
+    const yy = parseInt(y.year, 10) || 9999;
+    if(yx !== yy) return yx - yy;                       // oudste uitgave eerst
+    return (x.trackCount || 0) - (y.trackCount || 0) || y.score - x.score;
+  });
+
+  return out.slice(0, 8);
+}
+/* ==MATCH-END== */
+
+/* ------------------------------------------------------------
+   Bronnen: iTunes + Deezer (beide via JSONP)
+   ------------------------------------------------------------ */
+const enc = encodeURIComponent;
+
+async function safeJsonp(url){
+  try{ return await jsonp(url); }
+  catch(err){ console.warn('Request mislukt:', url, '-', err.message); return null; }
+}
+
+function itunesToCand(r){
+  return {
+    source: 'itunes',
+    id: r.collectionId,
+    artist: r.artistName || '',
+    title: r.collectionName || '',
+    coverUrl: r.artworkUrl100 ? r.artworkUrl100.replace('100x100', '600x600') : null,
+    year: r.releaseDate ? r.releaseDate.slice(0, 4) : null,
+    trackCount: r.trackCount || 0
+  };
+}
+
+function deezerToCand(r){
+  return {
+    source: 'deezer',
+    id: r.id,
+    artist: (r.artist && r.artist.name) || '',
+    title: r.title || '',
+    coverUrl: r.cover_xl || r.cover_big || r.cover_medium || null,
+    year: r.release_date ? r.release_date.slice(0, 4) : null,
+    trackCount: r.nb_tracks || 0
+  };
+}
+
+async function searchItunes(artist, album){
+  const various = isVarious(artist);
+  const combined = various ? album : `${artist} ${album}`;
+  const base = 'https://itunes.apple.com/search?media=music&entity=album';
+  // Per resultaat onthouden we uit welke winkel (land) het komt: een album dat
+  // alleen in de NL-winkel staat, heeft géén tracks in de US-winkel.
+  const jobs = [
+    { country: 'US', url: `${base}&term=${enc(combined)}&limit=25&country=US` },
+    { country: 'NL', url: `${base}&term=${enc(combined)}&limit=25&country=NL` },
+    { country: 'US', url: `${base}&attribute=albumTerm&term=${enc(album)}&limit=50&country=US` }
+  ];
+  // Alle albums van de artiest (grote limiet, zodat niets wegvalt)
+  if(!various) jobs.push({ country: 'US', url: `${base}&attribute=artistTerm&term=${enc(artist)}&limit=200&country=US` });
+
+  const responses = await Promise.all(jobs.map(j => safeJsonp(j.url)));
+  const byId = new Map();
+  responses.forEach((d, k) => {
+    if(!d || !d.results) return;
+    for(const r of d.results){
+      if(!(r.collectionId && r.collectionName)) continue;
+      let c = byId.get(r.collectionId);
+      if(!c){ c = itunesToCand(r); c.countries = []; byId.set(r.collectionId, c); }
+      if(!c.countries.includes(jobs[k].country)) c.countries.push(jobs[k].country);
+    }
+  });
+  return [...byId.values()];
+}
+
+async function searchDeezer(artist, album){
+  const clean = s => s.replace(/"/g, '');
+  const various = isVarious(artist);
+  const queries = various
+    ? [clean(album), `album:"${clean(album)}"`]
+    : [`artist:"${clean(artist)}" album:"${clean(album)}"`, `${clean(artist)} ${clean(album)}`, `album:"${clean(album)}"`];
+  const responses = await Promise.all(queries.map(q =>
+    safeJsonp(`https://api.deezer.com/search/album?q=${enc(q)}&limit=25&output=jsonp`)
+  ));
+  const out = [];
+  for(const d of responses){
+    if(!d || !d.data) continue;
+    for(const r of d.data){ if(r.id && r.title) out.push(deezerToCand(r)); }
+  }
+  return out;
+}
+
+async function loadOverride(ov){
+  if(ov.itunes){
+    const d = await safeJsonp(`https://itunes.apple.com/lookup?id=${enc(ov.itunes)}`);
+    const r = d && d.results && d.results.find(x => x.collectionId);
+    if(r) return itunesToCand(r);
+  }
+  if(ov.deezer){
+    const d = await safeJsonp(`https://api.deezer.com/album/${enc(ov.deezer)}?output=jsonp`);
+    if(d && d.id) return deezerToCand(d);
+  }
+  return null;
+}
+
+// Deezer geeft het jaar pas in de albumdetails
+async function ensureDetails(c){
+  if(c.source === 'deezer' && !c.year && !c.detailsDone){
+    c.detailsDone = true;
+    const d = await safeJsonp(`https://api.deezer.com/album/${enc(c.id)}?output=jsonp`);
+    if(d && d.release_date) c.year = d.release_date.slice(0, 4);
+  }
+}
+
+// Zoekt de beste kandidaten voor een album (met cache)
+async function findCandidates(a){
+  const label = labelFor(a);
+  if(albumCache.has(label)) return albumCache.get(label);
+
+  const result = [];
+  const ov = manualOverrides[label];
+  if(ov){
+    const c = await loadOverride(ov);
+    if(c){ c.score = 2; result.push(c); }
+  }
+
+  let ranked = [];
+  try{
+    ranked = rankCandidates(await searchItunes(a.artist, a.album), a.artist, a.album);
+    // Geen (bijna) perfecte treffer? Probeer ook Deezer en kies uit alles samen.
+    if(!ranked.length || ranked[0].score < 0.85){
+      const dz = await searchDeezer(a.artist, a.album);
+      ranked = rankCandidates([...ranked, ...dz], a.artist, a.album);
+    }
+  } catch(err){
+    console.warn('Zoeken mislukt voor', label, '-', err.message);
+  }
+
+  const have = new Set(result.map(candKey));
+  for(const c of ranked){ if(!have.has(candKey(c))) result.push(c); }
+
+  albumCache.set(label, result);
+  return result;
+}
+
+// Tracklijst (naam + duur + 30s-preview), per bron.
+// Probeert meerdere iTunes-winkels, valt daarna terug op Deezer.
+const TRACK_COUNTRIES = ['US', 'NL', 'GB', 'DE'];
+
+async function fetchItunesTracks(id, countries){
+  const list = [...new Set([...(countries || []), ...TRACK_COUNTRIES])];
+  for(const country of list){
+    let d = await safeJsonp(`https://itunes.apple.com/lookup?id=${enc(id)}&entity=song&limit=200&country=${country}`);
+    if(!d) d = await safeJsonp(`https://itunes.apple.com/lookup?id=${enc(id)}&entity=song&limit=200&country=${country}`); // 1x opnieuw bij time-out
+    const tracks = ((d && d.results) || [])
+      .filter(r => r.wrapperType === 'track' && r.trackName)
+      .sort((x, y) => (x.discNumber || 1) - (y.discNumber || 1) || (x.trackNumber || 0) - (y.trackNumber || 0))
+      .map(r => ({ name: r.trackName, durationMs: r.trackTimeMillis || null, previewUrl: r.previewUrl || null }));
+    if(tracks.length) return tracks;
+  }
+  return [];
+}
+
+async function fetchDeezerTracks(id){
+  let d = await safeJsonp(`https://api.deezer.com/album/${enc(id)}/tracks?limit=200&output=jsonp`);
+  if(!d) d = await safeJsonp(`https://api.deezer.com/album/${enc(id)}/tracks?limit=200&output=jsonp`);
+  return ((d && d.data) || [])
+    .sort((x, y) => (x.disk_number || 1) - (y.disk_number || 1) || (x.track_position || 0) - (y.track_position || 0))
+    .map(r => ({ name: r.title, durationMs: r.duration ? r.duration * 1000 : null, previewUrl: r.preview || null }));
+}
+
+async function fetchTracklist(c, a){
+  const key = candKey(c);
+  if(trackCache.has(key)) return trackCache.get(key);
+
+  let tracks = c.source === 'itunes' ? await fetchItunesTracks(c.id, c.countries) : await fetchDeezerTracks(c.id);
+
+  // iTunes heeft het album wel, maar geen tracks? Zoek hetzelfde album op Deezer.
+  if(!tracks.length && c.source === 'itunes' && a){
+    const dz = rankCandidates(await searchDeezer(a.artist, a.album), a.artist, a.album)[0];
+    if(dz) tracks = await fetchDeezerTracks(dz.id);
+  }
+
+  if(tracks.length) trackCache.set(key, tracks);
+  return tracks;
+}
+
+/* ------------------------------------------------------------
+   Speler: 30-seconden previews via <audio> (geen login of setup nodig)
+   - klik op een tracktitel om af te spelen
+   - volgende track start automatisch, de komende track wordt vooraf geladen
+   - mediatoetsen / vergrendelscherm werken via de Media Session API
+   ------------------------------------------------------------ */
+const ICON = {
+  play:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+  prev:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
+  next:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg>'
+};
+
+const audio = new Audio();
+audio.preload = 'auto';
+const preloader = new Audio();   // laadt alvast de volgende track
+preloader.preload = 'auto';
+
+let play = null;          // { a, tracks, key, idx, cover } wat er nu speelt
+let playDisplay = null;   // { a, tracks, key, cover } het getoonde album
+let seeking = false;
+
+const playerEl = document.createElement('div');
+playerEl.className = 'player';
+playerEl.hidden = true;
+playerEl.innerHTML = `
+  <div class="np" data-role="np">Klik op een nummer om af te spelen</div>
+  <div class="seek-row">
+    <span data-role="pos">0:00</span>
+    <input type="range" min="0" max="1000" value="0" step="1" data-role="seek" aria-label="Voortgang">
+    <span data-role="dur">0:30</span>
+  </div>
+  <div class="controls">
+    <button class="ctl-btn" type="button" data-role="prev" aria-label="Vorige">${ICON.prev}</button>
+    <button class="ctl-btn main" type="button" data-role="toggle" aria-label="Afspelen/pauzeren">${ICON.play}</button>
+    <button class="ctl-btn" type="button" data-role="next" aria-label="Volgende">${ICON.next}</button>
+  </div>
+  <div class="player-note">Preview van 30 seconden · het hele nummer via de groene knop</div>
+`;
+const pEl = role => playerEl.querySelector(`[data-role="${role}"]`);
+
+function hasPreview(t){ return !!(t && t.previewUrl); }
+
+function fmtTime(sec){
+  const s = Math.max(0, Math.round(sec || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function renderPlayerUI(){
+  const show = !!play || !!(playDisplay && playDisplay.tracks.some(hasPreview));
+  playerEl.hidden = !show;
+}
+
+function mountPlayer(){
+  const col = albumDisplay.querySelector('.cover-col');
+  if(col) col.appendChild(playerEl);
+  renderPlayerUI();
+}
+
+function updateIcon(){
+  pEl('toggle').innerHTML = audio.paused ? ICON.play : ICON.pause;
+}
+
+function updateProgress(){
+  const dur = isFinite(audio.duration) ? audio.duration : 0;
+  const cur = audio.currentTime || 0;
+  if(!seeking) pEl('seek').value = dur ? Math.round(cur / dur * 1000) : 0;
+  pEl('pos').textContent = fmtTime(cur);
+  pEl('dur').textContent = fmtTime(dur || 30);
+}
+
+function renderNowPlaying(){
+  if(!play){ pEl('np').textContent = 'Klik op een nummer om af te spelen'; return; }
+  const t = play.tracks[play.idx];
+  pEl('np').textContent = `${t.name} — ${play.a.artist}`;
+}
+
+// Kleurt het spelende nummer groen, ook als je terugkeert naar dit album
+function updateHighlight(){
+  const list = document.getElementById('trackList');
+  if(!list) return;
+  list.querySelectorAll('li.playing').forEach(li => li.classList.remove('playing'));
+  if(!play || !playDisplay || play.key !== playDisplay.key) return;
+  const li = list.querySelector(`li[data-idx="${play.idx}"]`);
+  if(li) li.classList.add('playing');
+}
+
+function nextIndex(from, dir){
+  if(!play) return -1;
+  for(let i = from + dir; i >= 0 && i < play.tracks.length; i += dir){
+    if(hasPreview(play.tracks[i])) return i;
+  }
+  return -1;
+}
+
+function preloadNext(){
+  const n = nextIndex(play.idx, 1);
+  if(n >= 0){
+    preloader.src = play.tracks[n].previewUrl;
+    preloader.load();
+  }
+}
+
+function updateMediaSession(){
+  if(!('mediaSession' in navigator) || !play || typeof MediaMetadata === 'undefined') return;
+  try{
+    const t = play.tracks[play.idx];
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: t.name,
+      artist: play.a.artist,
+      album: play.a.album,
+      artwork: play.cover ? [{ src: play.cover, sizes: '600x600' }] : []
+    });
+  } catch(e){}
+}
+
+function startTrack(ctx, idx){
+  const t = ctx.tracks[idx];
+  if(!hasPreview(t)) return false;
+  play = { a: ctx.a, tracks: ctx.tracks, key: ctx.key, cover: ctx.cover, idx };
+  audio.src = t.previewUrl;
+  const p = audio.play();
+  if(p && p.catch) p.catch(() => {});
+  renderNowPlaying();
+  renderPlayerUI();
+  updateHighlight();
+  updateProgress();
+  preloadNext();
+  updateMediaSession();
+  return true;
+}
+
+function skip(dir){
+  if(!play) return;
+  // "Vorige" binnen de eerste 3 seconden = vorige track, anders opnieuw beginnen
+  if(dir < 0 && audio.currentTime > 3){ audio.currentTime = 0; return; }
+  const n = nextIndex(play.idx, dir);
+  if(n >= 0) startTrack(play, n);
+}
+
+function togglePlay(){
+  if(play){
+    if(audio.paused){ const p = audio.play(); if(p && p.catch) p.catch(() => {}); }
+    else audio.pause();
+    return;
+  }
+  if(playDisplay){
+    const first = playDisplay.tracks.findIndex(hasPreview);
+    if(first >= 0) startTrack(playDisplay, first);
+  }
+}
+
+audio.addEventListener('play', updateIcon);
+audio.addEventListener('pause', updateIcon);
+audio.addEventListener('timeupdate', updateProgress);
+audio.addEventListener('loadedmetadata', updateProgress);
+audio.addEventListener('ended', () => {
+  const n = nextIndex(play ? play.idx : 0, 1);
+  if(n >= 0) startTrack(play, n);   // volgende track start vanzelf
+  else updateIcon();
+});
+audio.addEventListener('error', () => {
+  if(!play || !audio.getAttribute('src')) return;
+  const n = nextIndex(play.idx, 1);
+  if(n >= 0) startTrack(play, n);
+});
+
+pEl('toggle').addEventListener('click', togglePlay);
+pEl('prev').addEventListener('click', () => skip(-1));
+pEl('next').addEventListener('click', () => skip(1));
+
+const seekEl = pEl('seek');
+seekEl.addEventListener('input', () => {
+  seeking = true;
+  const dur = isFinite(audio.duration) ? audio.duration : 30;
+  pEl('pos').textContent = fmtTime(dur * seekEl.value / 1000);
+});
+seekEl.addEventListener('change', () => {
+  const dur = isFinite(audio.duration) ? audio.duration : 0;
+  if(dur) audio.currentTime = dur * seekEl.value / 1000;
+  seeking = false;
+});
+
+if('mediaSession' in navigator){
+  try{
+    navigator.mediaSession.setActionHandler('play', togglePlay);
+    navigator.mediaSession.setActionHandler('pause', togglePlay);
+    navigator.mediaSession.setActionHandler('previoustrack', () => skip(-1));
+    navigator.mediaSession.setActionHandler('nexttrack', () => skip(1));
+  } catch(e){}
+}
+
+// Klik op een tracktitel = afspelen; zonder preview opent de Spotify-link gewoon
+albumDisplay.addEventListener('click', e => {
+  const link = e.target.closest('a.track-link');
+  if(!link || !playDisplay) return;
+  if(e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  const idx = parseInt(link.dataset.idx, 10);
+  if(!hasPreview(playDisplay.tracks[idx])) return;
+  e.preventDefault();
+  if(play && play.key === playDisplay.key && play.idx === idx){ togglePlay(); return; }
+  startTrack(playDisplay, idx);
+});
+
+/* ------------------------------------------------------------
+   Weergave
+   ------------------------------------------------------------ */
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function loadPicks(){
+  try{ return JSON.parse(localStorage.getItem('cdNostalgiaPicks') || '{}'); }
+  catch(e){ return {}; }
+}
+function savePick(label, key){
+  try{
+    const p = loadPicks();
+    p[label] = key;
+    localStorage.setItem('cdNostalgiaPicks', JSON.stringify(p));
+  } catch(e){}
+}
+
+async function renderAlbum(a){
+  const requestId = ++currentRequestId;
+  const albumUrl = spotifySearchUrl(`${a.artist} ${a.album}`);
+
+  albumDisplay.innerHTML = `
+    <div class="cover-col">
+      <div class="cover-wrap" id="coverWrap"><div class="spinner"></div></div>
+      <div class="release-year" id="releaseYear"></div>
+      <div class="match-info" id="matchInfo"></div>
+      <button class="wrong-btn" id="wrongBtn" type="button" hidden></button>
+    </div>
+    <div class="info">
+      <div class="title-row">
+        <h1 class="album-title"><a href="${albumUrl}" target="_blank" rel="noopener">${esc(a.album)}</a></h1>
+        ${playButton(albumUrl, 'Open album op Spotify')}
+      </div>
+      <p class="artist-name">${esc(a.artist)}</p>
+      <ol class="tracklist" id="trackList" style="list-style:none;">
+        <li class="track-loading"><span class="mini-spinner"></span> Tracklijst laden...</li>
+      </ol>
+    </div>
+  `;
+  mountPlayer();
+
+  const cands = await findCandidates(a);
+  if(requestId !== currentRequestId) return;
+
+  const picked = loadPicks()[labelFor(a)];
+  let idx = cands.findIndex(c => candKey(c) === picked);
+  if(idx < 0) idx = 0;
+  showCandidate(a, cands, idx, 0);
+}
+
+function showCover(coverWrap, c, a){
+  if(!c.coverUrl){
+    coverWrap.innerHTML = `<div class="cover-fallback">Geen hoes gevonden<br>${esc(a.artist)}<br>${esc(a.album)}</div>`;
+    return;
+  }
+  // Spinner blijft staan tot de hoes echt binnen is, dan fade-in
+  coverWrap.innerHTML = `<div class="spinner"></div><img alt="${esc(a.album)} cover">`;
+  const img = coverWrap.querySelector('img');
+  const reveal = () => {
+    requestAnimationFrame(() => {
+      img.classList.add('loaded');
+      const sp = coverWrap.querySelector('.spinner');
+      if(sp) sp.remove();
+    });
+  };
+  img.addEventListener('load', reveal);
+  img.addEventListener('error', () => {
+    coverWrap.innerHTML = `<div class="cover-fallback">Hoes kon niet geladen worden<br>${esc(a.artist)}<br>${esc(a.album)}</div>`;
+  });
+  img.src = c.coverUrl;
+  if(img.complete && img.naturalWidth) reveal();
+}
+
+async function showCandidate(a, cands, idx, tried){
+  const requestId = ++currentRequestId;
+  const coverWrap = document.getElementById('coverWrap');
+  const releaseYearEl = document.getElementById('releaseYear');
+  const matchInfo = document.getElementById('matchInfo');
+  const wrongBtn = document.getElementById('wrongBtn');
+  const trackListEl = document.getElementById('trackList');
+  if(!coverWrap || !trackListEl) return;
+
+  playDisplay = null;
+  updateHighlight();
+  renderPlayerUI();
+
+  // Reset naar laadstatus (belangrijk bij doorbladeren)
+  coverWrap.innerHTML = '<div class="spinner"></div>';
+  releaseYearEl.textContent = '';
+  matchInfo.textContent = '';
+  trackListEl.innerHTML = `<li class="track-loading"><span class="mini-spinner"></span> Tracklijst laden...</li>`;
+
+  if(!cands.length){
+    coverWrap.innerHTML = `<div class="cover-fallback">Geen hoes gevonden<br>${esc(a.artist)}<br>${esc(a.album)}</div>`;
+    trackListEl.innerHTML = `<li class="track-error">Album niet gevonden — geen tracklijst beschikbaar.</li>`;
+    wrongBtn.hidden = true;
+    return;
+  }
+
+  const c = cands[idx];
+  await ensureDetails(c);
+  if(requestId !== currentRequestId) return;
+
+  showCover(coverWrap, c, a);
+  releaseYearEl.textContent = c.year || '';
+  matchInfo.textContent = `Gevonden: ${c.artist} – ${c.title}`;
+
+  wrongBtn.hidden = cands.length < 2;
+  wrongBtn.textContent = `Verkeerd album? Probeer volgende (${idx + 1}/${cands.length})`;
+  wrongBtn.onclick = () => {
+    const next = (idx + 1) % cands.length;
+    savePick(labelFor(a), candKey(cands[next]));
+    showCandidate(a, cands, next, 0);
+  };
+
+  const tracks = await fetchTracklist(c, a);
+  if(requestId !== currentRequestId) return;
+
+  if(tracks.length === 0){
+    // Geen tracks bij deze kandidaat (ook niet via Deezer): probeer automatisch de volgende
+    if(tried < cands.length - 1){
+      showCandidate(a, cands, (idx + 1) % cands.length, tried + 1);
+      return;
+    }
+    trackListEl.innerHTML = `<li class="track-error">Geen tracklijst gevonden voor dit album.</li>`;
+    return;
+  }
+
+  trackListEl.innerHTML = tracks.map((t, i) => {
+    const trackUrl = spotifySearchUrl(`${a.artist} ${t.name}`);
+    const durationLabel = formatDuration(t.durationMs);
+    return `<li data-idx="${i}">
+      <span class="track-num">${i + 1}.</span>
+      <a class="track-link" data-idx="${i}" href="${trackUrl}" target="_blank" rel="noopener">${esc(t.name)}</a>
+      <span class="track-duration">${durationLabel}</span>
+      ${playButton(trackUrl, 'Open nummer op Spotify')}
+    </li>`;
+  }).join('');
+
+  playDisplay = { a, tracks, key: labelFor(a) + '|' + candKey(c), cover: c.coverUrl };
+  renderPlayerUI();
+  updateHighlight();
+}
+
+// dropdown interactie
+searchInput.addEventListener('focus', () => renderDropdown(searchInput.value));
+searchInput.addEventListener('input', () => renderDropdown(searchInput.value));
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.search-wrap')){
+    dropdownList.classList.remove('open');
+  }
+});
+searchInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') dropdownList.classList.remove('open');
+});
+
+// "Random" knop: kiest een willekeurig album uit de volledige lijst
+randomBtn.addEventListener('click', () => {
+  const randomIndex = Math.floor(Math.random() * albumsData.length);
+  selectAlbum(albumsData[randomIndex]);
+});
+
+// Spotify-app toggle: voorkeur opslaan + huidige album herrenderen met nieuwe links
+appModeToggle.addEventListener('change', () => {
+  setLinkMode(appModeToggle.checked ? 'app' : 'web');
+  if(currentAlbum){
+    renderAlbum(currentAlbum);
+  }
+});
+
+// Toggle-status initialiseren vanuit opgeslagen voorkeur
+appModeToggle.checked = (getLinkMode() === 'app');
+
+// Zoekbalk start in de homepage-slot (gecentreerd, onder de titel)
+homeSearchRow.appendChild(searchRowEl);
+
+// Start met lege zoekbox, homepage zichtbaar en gecentreerd, geen album getoond
+</script>
+</body>
+</html>
