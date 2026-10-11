@@ -124,6 +124,17 @@
   .album-caption{padding:22px 4px 0;overflow-wrap:anywhere;}
   .album-caption .artist-name{font-size:16px;margin:0 0 7px;}
   .album-caption .album-title{font-size:clamp(22px,3vw,29px);line-height:1.2;font-weight:650;letter-spacing:-.6px;}
+  .album-caption .album-title a{color:inherit;text-decoration:none;}
+  .caption-actions{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;min-height:32px;}
+  .release-year{min-height:0;}
+  .album-play{display:inline-flex;align-items:center;gap:6px;color:var(--green);text-decoration:none;font-size:12px;}
+  .album-play svg{width:24px;height:24px;}
+  .album-play:hover{color:#8af0a6;}
+  .favorite-star{width:36px;height:36px;border:0;background:transparent;padding:0;color:#ffd54f;font:32px/1 system-ui;cursor:pointer;}
+  .favorite-star:hover{transform:scale(1.12);}
+  .favorite-star:focus-visible,.favorites-filter:focus-visible{outline:2px solid #ffd54f;outline-offset:3px;}
+  .favorites-filter{width:42px;height:44px;padding:0;flex:0 0 42px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:#ffd54f;font:28px/1 system-ui;}
+  .favorites-filter[aria-pressed="true"]{color:#ffd54f;}
   .album-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;padding:0;border:0;background:transparent;color:#aaa;font-size:34px;line-height:1;cursor:pointer;border-radius:9px;}
   .album-nav:hover{background:#202020;color:#fff;}
   .album-nav.prev{right:calc(100% + 20px);}.album-nav.next{left:calc(100% + 20px);}
@@ -133,6 +144,7 @@
   .album-meta a{color:var(--muted);text-decoration:none;display:block;margin-top:7px;}
   #albumDisplay .info{display:none;min-width:0;width:100%;}
   #albumDisplay.expanded{align-items:flex-start;padding-top:12px;}
+  .top-bar.album-open{display:none;}
   #albumDisplay.expanded .album-layout{grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:48px;}
   #albumDisplay.expanded .cover-shell{width:100%;}
   #albumDisplay.expanded .info{display:block;animation:reveal-tracks .45s ease both;}
@@ -171,17 +183,12 @@
     border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;
   }
   .player[hidden]{ display:none; }
-  .player .np{
-    font-size:12px; color:var(--text); text-align:center; min-height:16px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
   .player-note{ font-size:10px; color:var(--muted); text-align:center; line-height:1.4; }
   .seek-row{
     display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted);
     font-variant-numeric:tabular-nums;
   }
   .seek-row input[type=range]{ flex:1; min-width:0; accent-color:var(--green); cursor:pointer; }
-  .controls{ display:flex; align-items:center; justify-content:center; gap:14px; }
   .ctl-btn{
     background:none; border:none; color:var(--text); cursor:pointer; padding:0;
     width:36px; height:36px; border-radius:50%;
@@ -189,10 +196,12 @@
     transition:color .15s, background .15s;
   }
   .ctl-btn:hover{ color:var(--green); }
-  .ctl-btn svg{ width:20px; height:20px; }
-  .ctl-btn.main{ background:var(--green); color:#121212; width:44px; height:44px; }
+  .ctl-btn svg{ width:18px; height:18px; }
+  .ctl-btn.main{ background:var(--green); color:#121212; width:36px; height:36px; flex:0 0 36px; }
   .ctl-btn.main:hover{ background:#1ed760; color:#121212; }
   .tracklist li.playing .track-link, .tracklist li.playing .track-num{ color:var(--green); }
+  .seek-row{gap:9px;}
+  .seek-row input[type=range]{min-width:0;}
 
 
   .title-row{ display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap; }
@@ -286,6 +295,8 @@
     .album-caption{padding-top:20px;}
     .album-caption .artist-name{font-size:15px;}
     .album-caption .album-title{font-size:25px;}
+    .caption-actions{margin-top:10px;}
+    .favorites-filter{width:42px;flex-basis:42px;}
     #albumDisplay.expanded{padding-top:0;}
     #albumDisplay.expanded .album-layout{grid-template-columns:minmax(0,1fr);gap:28px;}
     #albumDisplay.expanded .cover-shell{width:min(100%,350px);}
@@ -303,6 +314,14 @@
   }
   #collectionStatus{font-size:12px;color:var(--muted);margin-top:12px;}
   button:disabled{opacity:.45;cursor:wait;}
+  #favoriteLoginDialog{width:min(92vw,420px);border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);padding:24px;box-shadow:0 18px 60px #000a;}
+  #favoriteLoginDialog::backdrop{background:#0009;backdrop-filter:blur(3px);}
+  .favorite-login-title{margin:0 0 8px;font-size:20px;}
+  .favorite-login-copy{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.5;}
+  .favorite-login-form label{display:block;margin:12px 0;color:var(--muted);font-size:13px;}
+  .favorite-login-form input{display:block;width:100%;margin-top:6px;padding:11px;border:1px solid var(--border);border-radius:7px;background:var(--panel2);color:var(--text);font-size:16px;}
+  .favorite-login-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+  .favorite-login-error{color:#ff8c8c;font-size:13px;min-height:18px;margin:8px 0 0;}
 </style>
 </head>
 <body>
@@ -336,14 +355,30 @@
     <input type="text" id="searchInput" placeholder="Zoek artiest of album..." autocomplete="off">
     <div id="dropdownList" class="dropdown-list"></div>
   </div>
+  <button id="favoritesFilter" class="favorites-filter" type="button" aria-label="Toon alle albums" aria-pressed="false" title="Toon alle albums">☆</button>
   <button id="randomBtn" class="action-btn random-btn" type="button">Random</button>
 </div>
+
+<dialog id="favoriteLoginDialog" aria-labelledby="favoriteLoginTitle">
+  <h2 class="favorite-login-title" id="favoriteLoginTitle">Favoriet opslaan</h2>
+  <p class="favorite-login-copy">Log in met je Supabase beheeraccount. De favoriet wordt dan voor iedereen bij dit album opgeslagen.</p>
+  <form id="favoriteLoginForm" class="favorite-login-form">
+    <label>E-mailadres<input id="favoriteEmail" type="email" autocomplete="username" required></label>
+    <label>Wachtwoord<input id="favoritePassword" type="password" autocomplete="current-password" required></label>
+    <p id="favoriteLoginError" class="favorite-login-error" role="alert"></p>
+    <div class="favorite-login-actions">
+      <button class="action-btn" id="favoriteLoginCancel" type="button">Annuleren</button>
+      <button class="action-btn random-btn" id="favoriteLoginSubmit" type="submit">Inloggen</button>
+    </div>
+  </form>
+</dialog>
 
 <script>
 // De database is de enige bron voor de albumcollectie.
 let albumsData = [];
 const DB_URL = 'https://oqqukeaoscwfsijlwrpn.supabase.co';
 const DB_KEY = 'sb_publishable__Cl45YCzMcAbKi1WHrng9A_s9DH6bz_';
+const OWNER_ID = '1ecdd7a5-3576-4e28-8d07-27add4ad3272';
 function safeHttps(value){
   try { const u = new URL(value); return u.protocol === 'https:' ? u.href : ''; }
   catch { return ''; }
@@ -368,6 +403,12 @@ async function readDatabase(path){
   if(!r.ok) throw new Error('Database niet bereikbaar (' + r.status + ').');
   return r.json();
 }
+async function authRequest(path, body){
+  const r=await fetch(DB_URL+path,{method:'POST',headers:{apikey:DB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(data.msg||data.message||data.error_description||'Inloggen is niet gelukt. Controleer je e-mailadres en wachtwoord.');
+  return data;
+}
 async function loadCollection(){
   searchInput.disabled = randomBtn.disabled = true;
   searchInput.placeholder = 'Collectie laden…';
@@ -380,9 +421,12 @@ async function loadCollection(){
       rows.push(...batch); if(batch.length < 500) break;
     }
     albumsData = rows.map(r => ({ ...r, album:r.title }));
+    favoriteIds = new Set(rows.filter(a => a.is_favorite === true).map(a => a.id));
+    updateFavoritesFilter();
     searchInput.placeholder = 'Zoek artiest of album…';
     searchInput.disabled = false;
     randomBtn.disabled = !rows.length;
+    document.getElementById('favoritesFilter').disabled = !rows.length;
     status.textContent = rows.length ? rows.length + ' albums' : 'De collectie is nog leeg.';
   } catch(e){
     status.textContent = 'De collectie kon niet worden geladen. ';
@@ -409,6 +453,12 @@ const dropdownList = document.getElementById('dropdownList');
 const albumDisplay = document.getElementById('albumDisplay');
 const randomBtn = document.getElementById('randomBtn');
 const appModeToggle = document.getElementById('appModeToggle');
+const favoritesFilter = document.getElementById('favoritesFilter');
+const FAVORITE_SESSION_KEY = 'cdNostalgiaFavoriteSession';
+let favoriteIds = new Set();
+let favoriteSession = readFavoriteSession();
+let pendingFavoriteId = null;
+let showFavoritesOnly = false;
 
 const albumCache = new Map();   // cover + collectionId + jaar per album
 const trackCache = new Map();   // tracklist (naam + duur) per collectionId
@@ -417,8 +467,22 @@ let jsonpCounter = 0;
 let isAlbumExpanded = false;
 let suppressCoverClickUntil = 0;
 let coverAnimation = null;
+function cancelCoverAnimation(){if(!coverAnimation)return;coverAnimation.finished?.catch(()=>{});coverAnimation.cancel();coverAnimation=null;}
 let currentAlbum = null; // onthoudt het laatst getoonde album, voor herrenderen bij toggle
 
+function readFavoriteSession(){try{return JSON.parse(sessionStorage.getItem(FAVORITE_SESSION_KEY)||'null');}catch{return null;}}
+function saveFavoriteSession(value){favoriteSession=value;try{sessionStorage.setItem(FAVORITE_SESSION_KEY,JSON.stringify(value));}catch{}}
+function clearFavoriteSession(){favoriteSession=null;try{sessionStorage.removeItem(FAVORITE_SESSION_KEY);}catch{}}
+async function getFavoriteAccessToken(){
+  if(!favoriteSession)return null;
+  if(Date.now()<((favoriteSession.expires_at||0)*1000)-60000)return favoriteSession.access_token;
+  try{
+    const refreshed=await authRequest('/auth/v1/token?grant_type=refresh_token',{refresh_token:favoriteSession.refresh_token});
+    if(refreshed.user?.id!==OWNER_ID)throw new Error('Dit account heeft geen beheerrechten.');
+    saveFavoriteSession({...refreshed,expires_at:refreshed.expires_at||Math.floor(Date.now()/1000)+refreshed.expires_in});
+    return favoriteSession.access_token;
+  }catch{clearFavoriteSession();return null;}
+}
 function labelFor(a){ return `${a.artist} - ${a.album}`; }
 
 /* ------------------------------------------------------------
@@ -459,12 +523,12 @@ function playButton(url, title){
 
 function renderDropdown(filter){
   const q = filter.trim().toLowerCase();
-  const matches = albumsData.filter(a => labelFor(a).toLowerCase().includes(q));
+  const matches = albumsData.filter(a => labelFor(a).toLowerCase().includes(q) && (!showFavoritesOnly || favoriteIds.has(a.id)));
   dropdownList.innerHTML = '';
 
   const countDiv = document.createElement('div');
   countDiv.className = 'dropdown-count';
-  countDiv.textContent = `${matches.length} album${matches.length === 1 ? '' : 's'}`;
+  countDiv.textContent = `${matches.length} album${matches.length === 1 ? '' : 's'}${showFavoritesOnly ? ' · favorieten' : ''}`;
   dropdownList.appendChild(countDiv);
 
   if(matches.length === 0){
@@ -868,8 +932,7 @@ async function fetchTracklist(c, a){
 const ICON = {
   play:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
-  prev:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
-  next:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg>'
+
 };
 
 const audio = new Audio();
@@ -885,16 +948,11 @@ const playerEl = document.createElement('div');
 playerEl.className = 'player';
 playerEl.hidden = true;
 playerEl.innerHTML = `
-  <div class="np" data-role="np">Klik op een nummer om af te spelen</div>
   <div class="seek-row">
     <span data-role="pos">0:00</span>
     <input type="range" min="0" max="1000" value="0" step="1" data-role="seek" aria-label="Voortgang">
     <span data-role="dur">0:30</span>
-  </div>
-  <div class="controls">
-    <button class="ctl-btn" type="button" data-role="prev" aria-label="Vorige">${ICON.prev}</button>
-    <button class="ctl-btn main" type="button" data-role="toggle" aria-label="Afspelen/pauzeren">${ICON.play}</button>
-    <button class="ctl-btn" type="button" data-role="next" aria-label="Volgende">${ICON.next}</button>
+    <button class="ctl-btn main" type="button" data-role="toggle" aria-label="Afspelen">${ICON.play}</button>
   </div>
   <div class="player-note">Korte preview</div>
 `;
@@ -927,6 +985,7 @@ function stopPlayback(){
 
 function updateIcon(){
   pEl('toggle').innerHTML = audio.paused ? ICON.play : ICON.pause;
+  pEl('toggle').setAttribute('aria-label',audio.paused?'Afspelen':'Pauzeren');
 }
 
 function updateProgress(){
@@ -935,12 +994,6 @@ function updateProgress(){
   if(!seeking) pEl('seek').value = dur ? Math.round(cur / dur * 1000) : 0;
   pEl('pos').textContent = fmtTime(cur);
   pEl('dur').textContent = fmtTime(dur || 30);
-}
-
-function renderNowPlaying(){
-  if(!play){ pEl('np').textContent = 'Klik op een nummer om af te spelen'; return; }
-  const t = play.tracks[play.idx];
-  pEl('np').textContent = `${t.name} — ${t.artist || play.a.artist}`;
 }
 
 // Kleurt het spelende nummer groen, ook als je terugkeert naar dit album
@@ -989,8 +1042,7 @@ function startTrack(ctx, idx){
   play = { a: ctx.a, tracks: ctx.tracks, key: ctx.key, cover: ctx.cover, idx };
   audio.src = t.previewUrl;
   const p = audio.play();
-  if(p && p.catch) p.catch(() => { pEl('np').textContent = 'Afspelen mislukt. Probeer opnieuw met de afspeelknop.'; });
-  renderNowPlaying();
+  if(p && p.catch) p.catch(() => { playerEl.querySelector('.player-note').textContent = 'Afspelen mislukt. Tik nogmaals op de afspeelknop.'; });
   playerEl.querySelector('.player-note').textContent = t.source === 'itunes' ? 'Korte preview · provided courtesy of iTunes' : 'Korte preview · Deezer';
   renderPlayerUI();
   updateHighlight();
@@ -1000,17 +1052,9 @@ function startTrack(ctx, idx){
   return true;
 }
 
-function skip(dir){
-  if(!play) return;
-  // "Vorige" binnen de eerste 3 seconden = vorige track, anders opnieuw beginnen
-  if(dir < 0 && audio.currentTime > 3){ audio.currentTime = 0; return; }
-  const n = nextIndex(play.idx, dir);
-  if(n >= 0) startTrack(play, n);
-}
-
 function togglePlay(){
   if(play){
-    if(audio.paused){ const p = audio.play(); if(p && p.catch) p.catch(() => { pEl('np').textContent = 'Afspelen mislukt. Probeer opnieuw met de afspeelknop.'; }); }
+    if(audio.paused){ const p = audio.play(); if(p && p.catch) p.catch(() => { playerEl.querySelector('.player-note').textContent = 'Afspelen mislukt. Tik nogmaals op de afspeelknop.'; }); }
     else audio.pause();
     return;
   }
@@ -1036,8 +1080,6 @@ audio.addEventListener('error', () => {
 });
 
 pEl('toggle').addEventListener('click', togglePlay);
-pEl('prev').addEventListener('click', () => skip(-1));
-pEl('next').addEventListener('click', () => skip(1));
 
 const seekEl = pEl('seek');
 seekEl.addEventListener('input', () => {
@@ -1055,8 +1097,6 @@ if('mediaSession' in navigator){
   try{
     navigator.mediaSession.setActionHandler('play', togglePlay);
     navigator.mediaSession.setActionHandler('pause', togglePlay);
-    navigator.mediaSession.setActionHandler('previoustrack', () => skip(-1));
-    navigator.mediaSession.setActionHandler('nexttrack', () => skip(1));
   } catch(e){}
 }
 
@@ -1096,10 +1136,11 @@ function savePick(label, key){
 async function renderAlbum(a){
   const requestId = ++currentRequestId;
   stopPlayback();
-  const albumUrl = spotifyItem('album', a.spotify_id);
+  const albumUrl = a.spotify_id ? spotifyItem('album', a.spotify_id) : spotifySearchUrl(`${a.artist} ${a.album}`);
 
-  coverAnimation?.cancel();
+  cancelCoverAnimation();
   albumDisplay.classList.toggle('expanded',isAlbumExpanded);
+  topBar.classList.toggle('album-open',isAlbumExpanded);
   albumDisplay.innerHTML = `
     <div class="album-layout">
       <div class="cover-shell">
@@ -1112,10 +1153,14 @@ async function renderAlbum(a){
         </div>
         <div class="album-caption">
           <p class="artist-name">${esc(a.artist)}</p>
-          <h1 class="album-title">${albumUrl ? `<a href="${albumUrl}" target="_blank" rel="noopener">${esc(a.album)}</a>` : esc(a.album)}</h1>
+          <h1 class="album-title">${esc(a.album)}</h1>
+          <div class="caption-actions">
+            <span class="release-year" id="releaseYear">${esc(a.release_year || '')}</span>
+            <a class="album-play" href="${albumUrl}" target="_blank" rel="noopener" aria-label="Open ${esc(a.album)} op Spotify">${playIconSvg}<span>Spotify</span></a>
+            <button class="favorite-star" id="favoriteToggle" type="button" aria-label="${favoriteIds.has(a.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}" aria-pressed="${favoriteIds.has(a.id)}" title="${favoriteIds.has(a.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}">${favoriteIds.has(a.id) ? '★' : '☆'}</button>
+          </div>
         </div>
         <div class="album-meta">
-          <div class="release-year" id="releaseYear"></div>
           <div class="match-info" id="matchInfo"></div>
           <button class="wrong-btn" id="wrongBtn" type="button" hidden></button>
         </div>
@@ -1135,6 +1180,7 @@ async function renderAlbum(a){
   document.getElementById('prevAlbum').onclick=()=>navigateAlbum(-1);
   document.getElementById('nextAlbum').onclick=()=>navigateAlbum(1);
   document.getElementById('prevAlbum').disabled=document.getElementById('nextAlbum').disabled=albumsData.length<2;
+  document.getElementById('favoriteToggle').onclick=toggleFavorite;
   mountPlayer();
   if(a.cover_url) showCover(document.getElementById('coverWrap'),{coverUrl:a.cover_url},a);
 
@@ -1150,7 +1196,7 @@ async function renderAlbum(a){
   if(requestId !== currentRequestId) return;
   if(stored.length){
     showCover(document.getElementById('coverWrap'), {coverUrl:safeHttps(a.cover_url)}, a);
-    document.getElementById('releaseYear').textContent=a.release_year || '';
+    document.getElementById('releaseYear').textContent=a.release_year || document.getElementById('releaseYear').textContent;
     document.getElementById('matchInfo').textContent='Uit je collectie';
     showStoreLink(a.itunes_url);
     renderTracks(a, stored.map(t=>({name:t.title,artist:t.artist,durationMs:t.duration_ms,previewUrl:safeHttps(t.preview_url),spotify_id:t.spotify_id,storeUrl:t.itunes_url,source:'itunes'})), 'db:'+a.id, safeHttps(a.cover_url));
@@ -1283,12 +1329,35 @@ function renderTracks(a, tracks, key, cover){
   renderPlayerUI(); updateHighlight();
 }
 
+function updateAlbumPlay(url){const link=document.querySelector('.album-play');if(link && url)link.href=url;}
+function setFavoriteButton(id,active){
+  const album=albumsData.find(a=>a.id===id);if(album)album.is_favorite=active;
+  if(active)favoriteIds.add(id);else favoriteIds.delete(id);
+  const b=document.getElementById('favoriteToggle');
+  if(b&&currentAlbum?.id===id){b.textContent=active?'★':'☆';b.setAttribute('aria-pressed',String(active));b.setAttribute('aria-label',active?'Verwijder uit favorieten':'Voeg toe aan favorieten');b.title=active?'Verwijder uit favorieten':'Voeg toe aan favorieten';}
+  updateFavoritesFilter();
+}
+function requestFavoriteLogin(id){pendingFavoriteId=id;const dialog=document.getElementById('favoriteLoginDialog');document.getElementById('favoriteLoginError').textContent='';dialog.showModal();document.getElementById('favoriteEmail').focus();}
+async function saveFavorite(id){
+  const token=await getFavoriteAccessToken();if(!token){requestFavoriteLogin(id);return;}
+  const nextValue=!favoriteIds.has(id);
+  try{
+    const r=await fetch(DB_URL+'/rest/v1/albums?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:DB_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({is_favorite:nextValue})});
+    const rows=await r.json().catch(()=>[]);
+    if(!r.ok)throw new Error(rows.message||rows.details||'Opslaan is niet gelukt.');
+    if(!Array.isArray(rows)||rows.length!==1)throw new Error('Album niet gevonden of je beheeraccount heeft geen schrijfrechten.');
+    setFavoriteButton(id,rows[0].is_favorite===true);
+  }catch(e){alert('Favoriet kon niet worden opgeslagen: '+e.message);}
+}
+function toggleFavorite(){if(currentAlbum)saveFavorite(currentAlbum.id);}
+function updateFavoritesFilter(){const active=showFavoritesOnly;favoritesFilter.textContent=active?'★':'☆';favoritesFilter.setAttribute('aria-pressed',String(active));favoritesFilter.setAttribute('aria-label',active?'Toon alle albums':'Toon alleen favorieten');favoritesFilter.title=active?'Toon alle albums':'Toon alleen favorieten';if(dropdownList.classList.contains('open'))renderDropdown(searchInput.value);}
 function toggleAlbumView(){
   const shell=albumDisplay.querySelector('.cover-shell');
   const before=shell?.getBoundingClientRect();
-  coverAnimation?.cancel();
+  cancelCoverAnimation();
   isAlbumExpanded=!isAlbumExpanded;
   albumDisplay.classList.toggle('expanded',isAlbumExpanded);
+  topBar.classList.toggle('album-open',isAlbumExpanded);
   const info=document.getElementById('albumInfo');
   info.inert=!isAlbumExpanded; info.setAttribute('aria-hidden',String(!isAlbumExpanded));
   const button=document.getElementById('coverToggle');
@@ -1300,6 +1369,7 @@ function toggleAlbumView(){
       {transform:`translate(${before.left-after.left}px,${before.top-after.top}px) scale(${before.width/after.width})`,transformOrigin:'top left'},
       {transform:'none',transformOrigin:'top left'}
     ],{duration:550,easing:'cubic-bezier(.2,.7,.2,1)'});
+    coverAnimation.finished?.catch(()=>{});
   }
 }
 function navigateAlbum(direction){
@@ -1348,11 +1418,30 @@ searchInput.addEventListener('keydown', (e) => {
   if(e.key === 'Escape') dropdownList.classList.remove('open');
 });
 
+favoritesFilter.addEventListener('click',()=>{showFavoritesOnly=!showFavoritesOnly;updateFavoritesFilter();});
+document.getElementById('favoriteLoginCancel').addEventListener('click',()=>{pendingFavoriteId=null;document.getElementById('favoriteLoginDialog').close();});
+document.getElementById('favoriteLoginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const submit=document.getElementById('favoriteLoginSubmit'),error=document.getElementById('favoriteLoginError');
+  submit.disabled=true;error.textContent='';
+  try{
+    const s=await authRequest('/auth/v1/token?grant_type=password',{email:document.getElementById('favoriteEmail').value.trim(),password:document.getElementById('favoritePassword').value});
+    if(s.user?.id!==OWNER_ID)throw new Error('Dit account heeft geen beheerrechten.');
+    saveFavoriteSession({...s,expires_at:s.expires_at||Math.floor(Date.now()/1000)+s.expires_in});
+    document.getElementById('favoritePassword').value='';
+    document.getElementById('favoriteLoginDialog').close();
+    const id=pendingFavoriteId;pendingFavoriteId=null;if(id)await saveFavorite(id);
+  }catch(err){error.textContent=err.message||'Inloggen is niet gelukt.';}
+  finally{submit.disabled=false;}
+});
+
 // "Random" knop: kiest een willekeurig album uit de volledige lijst
 randomBtn.addEventListener('click', () => {
   if(!albumsData.length) return;
-  const randomIndex = Math.floor(Math.random() * albumsData.length);
-  selectAlbum(albumsData[randomIndex]);
+  const pool=showFavoritesOnly?albumsData.filter(a=>favoriteIds.has(a.id)):albumsData;
+  if(!pool.length)return;
+  const randomIndex = Math.floor(Math.random() * pool.length);
+  selectAlbum(pool[randomIndex]);
 });
 
 // Spotify-app toggle: voorkeur opslaan + huidige album herrenderen met nieuwe links
@@ -1362,6 +1451,8 @@ appModeToggle.addEventListener('change', () => {
     renderAlbum(currentAlbum);
   }
 });
+
+updateFavoritesFilter();
 
 // Toggle-status initialiseren vanuit opgeslagen voorkeur
 appModeToggle.checked = (getLinkMode() === 'app');
