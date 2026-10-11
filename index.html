@@ -133,7 +133,7 @@
   .cover-wrap img{
     position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
     opacity:0; transform:translateY(12px) scale(.96);
-    transition:opacity .4s ease-out, transform .45s cubic-bezier(.2,.7,.2,1);
+    transition:opacity .9s ease-out, transform 1s cubic-bezier(.2,.7,.2,1);
   }
   .cover-wrap img.loaded{ opacity:1; transform:none; }
   @media (prefers-reduced-motion: reduce){
@@ -245,6 +245,15 @@
 
     footer{ font-size:12px; padding:0 6px; }
   }
+
+  .tracklist li[data-idx]{flex-wrap:wrap;}
+  .tracklist .player{flex:0 0 100%;margin:6px 0 4px;}
+  button.track-link{border:0;background:none;color:var(--text);padding:0;text-align:left;flex:1;font:inherit;cursor:pointer;}
+  button.track-link:hover{color:var(--green);}
+  span.track-link{flex:1;}
+  .tracklist .source-link{font-size:11px;color:var(--muted);}
+  #collectionStatus{font-size:12px;color:var(--muted);margin-top:12px;}
+  button:disabled{opacity:.45;cursor:wait;}
 </style>
 </head>
 <body>
@@ -263,13 +272,13 @@
   <div id="homeStage" class="home-stage">
     <h1 class="main-title">CD <span class="cd-emoji">💿</span> Nostalgia</h1>
     <p class="subtitle">Merien's collectie</p>
-    <div id="homeSearchRow"></div>
+    <div id="homeSearchRow"></div><div id="collectionStatus" role="status" aria-live="polite"></div>
   </div>
 
   <main id="albumDisplay"></main>
 
   <footer>
-    Albumhoes, releasejaar, speelduur &amp; tracklijst worden automatisch opgehaald via iTunes (met Deezer als reserve). Previews van 30 seconden; het hele nummer opent in Spotify.
+    Collectie uit de database · Albumgegevens via iTunes en Deezer waar nodig.<br>De speler laat korte previews horen. Spotify-links verschijnen alleen bij een gekoppeld album of nummer.
   </footer>
 </div>
 
@@ -282,351 +291,49 @@
 </div>
 
 <script>
-/* ============================================================
-   DATA
-   ------------------------------------------------------------
-   PLAK HIER EENVOUDIG EEN NIEUWE LIJST BIJ: elke regel in het
-   formaat "Artiest - Album". Dit is exact het format dat je
-   al gebruikt — gewoon toevoegen, geen verdere opmaak nodig.
-   ============================================================ */
-
-const albumsRaw = `
-A.R. Rahman - Bombay Dreams
-Above the Law - Black Mafia Life
-Adam F - Colours
-Air - LateNightTales
-Air - Moon Safari
-Alice in Chains - Live
-Aphrodite - Aphrodite
-Atlas Shrugged - Ninth Annual World's First
-Bad Brains - Rise
-Badly Drawn Boy - About a Boy
-Beastie Boys - Check Your Head
-Beastie Boys - Ill Communication
-Beastie Boys - Licensed to Ill
-Beastie Boys - Paul's Boutique
-Beastie Boys - Some Old Bullshit
-Beastie Boys - To the 5 Boroughs
-Belle & Sebastian - LateNightTales
-Ben Harper & The Blind Boys of Alabama - There Will Be a Light
-Ben Harper & The Innocent Criminals - Burn to Shine
-Big Youth - The Chanting Dread Inna Fine Style
-Biohazard - Tales from the Hard Side
-Biohazard - Urban Discipline
-Björk - Post
-Black Uhuru - Liberation: The Island Anthology
-Blame - Logical Progression Level 2
-Blink-182 - Dude Ranch
-Blink-182 - The Mark, Tom and Travis Show (The Enema Strikes Back!)
-Bloem de Ligny - Zink
-Blur - Parklife
-Bob Marley - The Very Best of the Early Years 1969–74
-Bob Marley & The Wailers - Catch a Fire
-Bob Marley & The Wailers - Confrontation
-Bob Marley & The Wailers - Exodus
-Booka Shade - DJ-Kicks
-Bran Van 3000 - Discosis
-Buraka Som Sistema - FabricLive.49
-Burning Spear - Calling Rastafari
-Burning Spear - Dry & Heavy
-Burning Spear - Live in Paris
-Buscemi - Camino Real
-Bush - Golden State
-Bush - Razorblade Suitcase
-Bush - Sixteen Stone
-Bush - The Science of Things
-Butthole Surfers - Independent Worm Saloon
-Chuck Carbo - Hey, Mardi Gras! (Here I Am)
-Claw Boys Claw - Sugar
-Colder - Again
-Corrosion of Conformity - Albatross
-Counting Crows - Hard Candy
-Da Lench Mob - Guerillas in tha Mist
-Daft Punk - Discovery
-Daft Punk - Homework
-Depeche Mode - Exciter
-Depeche Mode - Playing the Angel
-Depeche Mode - Ultra
-Dimitri from Paris - Monsieur Dimitri's De-Luxe House of Funk
-Dimitri from Paris - My Salsoul
-Disappear Fear - Skin / B.Y.O.G.
-DJ Shadow - Diminishing Returns
-Doe Maar - Het Afscheidsconcert
-Doe Maar - Klaar
-Downset - Downset
-Drown - Hold On to the Hollow
-Drowning Boats - Hot Dog
-Dub War - Wrong Side of Beautiful
-Duran Duran - Big Thing
-Eat Static - In the Nude!
-Eboman - Donuts with Buddah
-Eels - Beautiful Freak
-Eels - Souljacker
-Elastica - Elastica
-Elliott Smith - XO
-Eminem - The Marshall Mathers LP
-Extince - 2e Jeugd
-Extince - Binnenlandse Funk
-Extince - Viervoeters
-Extince - Vitamine E
-Fatboy Slim - Better Living Through Chemistry
-Fatboy Slim - LateNightTales
-Fatboy Slim - Live on Brighton Beach
-Fatboy Slim - On the Floor at the Boutique
-Fila Brazillia - Another Fine Mess
-Fila Brazillia - AnotherLateNight
-Filter - Short Bus
-Fish - The Complete BBC Sessions
-Fishbone - Give a Monkey a Brain and He'll Swear He's the Center of the Universe
-Fishbone - The Reality of My Surroundings
-Floris - Floris
-Foo Fighters - There Is Nothing Left to Lose
-Four Tet - LateNightTales
-Freaky Fukin Weirdoz - Senseless Wonder
-G. Love & Special Sauce - G. Love & Special Sauce
-Gorillaz - Gorillaz
-Groove Armada - AnotherLateNight
-Grooverider - Grooverider Presents: The Prototype Years
-Guru - Jazzmatazz, Volume II: The New Reality
-Hans Teeuwen - Dat Dan Weer Wel
-Hans Teeuwen - Industry of Love
-Hans Teeuwen - Met een Breierdeck
-Hans Teeuwen - Trui
-Hed PE - Broke
-Henrik Schwarz - Live
-Herman Finkers - Als Gezonde Jongen Zijnde
-Howie B - AnotherLateNight
-Huey Morgan - Planet Groove
-Ice Cube - Greatest Hits
-Ice-T - Home Invasion
-Iggy Pop - Best Of… Live
-Incubus - Enjoy Incubus
-Infadels - We Are Not the Infadels
-Infectious Grooves - Gorillaz
-Infectious Grooves - Mas Borracho
-Jamiroquai - LateNightTales
-Jane's Addiction - Ritual de lo Habitual
-Jango Edwards - De 21 Grootste Successen
-Jeff Buckley - Grace
-Jimi Hendrix - Blues
-Jimi Hendrix Experience - Radio One
-Jimmy Cliff - Wonderful World
-Josh Wink - Sessions
-Kid Koala - Your Mom's Favorite DJ
-Kid Loco - AnotherLateNight
-Kosheen - Kokopelli
-Krust - Coded Language
-Lange Frans & Baas B - Supervisie
-Lee Perry - Scratch Attack
-Lee Perry - The Upsetter
-Leftfield - Rhythm and Stealth: Phat Planet / Higher Ground
-Leij Buken - Journey Rewards
-Lenny Kravitz - Are You Gonna Go My Way
-Les Quatre Jules - On la joue couché… des Frères Jacques
-Letters to Cleo - Aurora Gory Alice
-Life of Agony - River Runs Red
-Life of Agony - Soul Searching Sun
-Life of Agony - Ugly
-Live - Secret Samadhi
-Live - Throwing Copper
-Living Colour - Stain
-Living Colour - Time's Up
-Mad Season - Above
-Madlib - Shades of Blue
-Madness - The Harder They Come
-Madonna - Ray of Light
-Madvillain - Madvillainy
-Massive Attack - Mezzanine
-Masters of Reality - Masters of Reality
-Metal Molly - Surgery for Zebra
-Metallica - …And Justice for All
-Moby - Play
-N.E.R.D - In Search Of…
-Nailbomb - Point Blank
-Naughty by Nature - Poverty's Paradise
-Nick Cave & The Bad Seeds - No More Shall We Part
-Nick Cave & The Bad Seeds - The Best Of
-Nightmares on Wax - LateNightTales
-Nine Inch Nails - "The Perfect Drug" Versions
-Nine Inch Nails - Broken
-Nine Inch Nails - Fixed
-Nine Inch Nails - Further Down the Spiral
-Nine Inch Nails - Pretty Hate Machine
-Nine Inch Nails - The Downward Spiral
-Nine Inch Nails - Things Falling Apart
-Nirvana - In Utero
-NOFX - Punk in Drublic
-Orbital - The Altogether
-Osdorp Posse - Vlijmscherp
-OutKast - Aquemini
-OutKast - Idlewild
-Pantera - Far Beyond Driven
-Pantera - Vulgar Display of Power
-Pearl Jam - Immortality
-Pearl Jam - Not for You
-Pearl Jam - Spin the Black Circle
-Pearl Jam - Yield
-Peplab - Drive
-Phil Pratt - The Phil Pratt Thing
-Pink Martini - Hey Eugene!
-Pixies - Surfer Rosa & Come On Pilgrim
-Placebo - Once More with Feeling: Singles 1996–2004
-Poet and the Roots - Dread Beat an' Blood
-Postmen - Documents
-Prefuse 73 - One Word Extinguisher
-Primus - Animals Should Not Try to Act Like People
-Primus - Antipop
-Primus - Frizzle Fry
-Primus - Miscellaneous Debris
-Primus - Pork Soda
-Primus - Rhinoplasty
-Primus - Sailing the Seas of Cheese
-Primus - Suck on This
-Prong - Cleansing
-Prong - Prove You Wrong
-Public Enemy - Times Up! 20 Greatest Hits
-R.E.M. - Monster
-Radiohead - Kid A
-Rage Against the Machine - Bullet in the Head
-Rage Against the Machine - Rage Against the Machine
-Red Hot Chili Peppers - Californication
-Red Hot Chili Peppers - Freaky Styley
-Red Hot Chili Peppers - One Hot Minute
-Red Snapper - Our Aim Is to Satisfy
-Rein Mercha - 't Is Oent, de Droom
-Rollins Band - Weight
-Senser - Stacked Up
-Sepultura - Chaos A.D.
-Sepultura - Hatred
-Sepultura - Roots
-Shaun Ryder - Planet Groove
-Sid - Túneo
-Skip the Rush - All Is Fit for Tonight
-Slash's Snakepit - It's Five O'Clock Somewhere
-Sly & Robbie - Joy Ride
-Sly & Robbie - LateNightTales
-Soundgarden - Down on the Upside
-Soundgarden - Superunknown
-Spearhead - Home
-St Germain - Tourist
-Staind - Break the Cycle
-Stanton Warriors - The Stanton Session
-Stéphane Pompougnac - Hôtel Costes 5
-Stéphane Pompougnac - Hôtel Costes Quatre
-Sublime - Sublime
-Suicidal Tendencies - Still Cyco After All These Years
-Supergrass - Supergrass
-Talking Heads - Stop Making Sense
-Teeuwen & Smeenk - Heist
-Tété - Par Monts et Vallons
-The Beach Boys - Christmas Album
-The Breeders - Last Splash
-The Chemical Brothers - Block Rockin' Beats
-The Chemical Brothers - Come with Us
-The Chemical Brothers - Dig Your Own Hole
-The Cult - The Singles 1984–1995
-The D.O.C. - No One Can Do It Better
-The Darkness - Permission to Land
-The Flaming Lips - LateNightTales
-The Gladiators - Dreadlocks the Time Is Now
-The Glimmers - FabricLive.31
-The Goats - No Goats, No Glory
-The Orb - Cydonia
-The Orb - Live 93
-The Orb - The Orb's Adventures Beyond the Ultraworld
-The Presidents of the United States of America - The Presidents of the United States of America
-The Prodigy - The Fat of the Land
-The Raconteurs - Broken Boy Soldiers
-The Rolling Stones - Hot Rocks 1
-The Smashing Pumpkins - MACHINA/The Machines of God
-The Smashing Pumpkins - Mellon Collie and the Infinite Sadness
-The Soundtrack of Our Lives - Behind the Music
-The Stone Roses - Second Coming
-The Stone Roses - The Complete Stone Roses
-The White Stripes - De Stijl
-The White Stripes - Elephant
-The White Stripes - White Blood Cells
-Therion - Theli
-Tommy Guerrero - AnotherLateNight
-Tony Touch - The Piece Maker
-Tool - Opiate
-Tool - Undertow
-Toots & The Maytals - True Love
-Travis - The Invisible Band
-Typhoon - Tussen Licht en Lucht
-U2 - All That You Can't Leave Behind
-Underworld - A Hundred Days Off
-Underworld - Beaucoup Fish
-Underworld - Oblivion with Bells
-Underworld - Pearl's Girl
-Urban Dance Squad - Grand Black Citizen
-VanVelzen - Take Me In & Hear Me Out
-Various - SuperFunk.
-Various artists- 2 Meter Sessies, Volume 1
-Various artists- Chillout in Ibiza
-Various artists- Christmas Greatest
-Various artists- City of God
-Various artists- Coldharbour Rocks
-Various artists- Day Tripper
-Various artists- Demon Knight
-Various artists- Denksport Zomerhits
-Various artists- Donnie Darko
-Various artists- Drum & Bass Selection 4
-Various artists- Eenmaal Andermaal
-Various artists- Ein Abend in Wien
-Various artists- Goa' Berlin 2001
-Various artists- Goal!
-Various artists- Help: A Day in the Life
-Various artists- Judgment Night
-Various artists- Kinky Reggae, Volume One
-Various artists- La Chica de Ipanema
-Various artists- Leave Them All Behind 2
-Various artists- Little Miss Sunshine
-Various artists- Mad for It
-Various artists- Nu Sounds: Slow Future Melange Showcase
-Various artists- Pinkpop Sampler 1998
-Various artists- Planet V
-Various artists- Q Covered: The Eighties
-Various artists- Roots of Dub Funk
-Various artists- Spectacular Classics
-Various artists- Spider-Man: Music from and Inspired By
-Various artists- Survival of the Fattest
-Various artists- The Acid House
-Various artists- The Best of Blaxploitation
-Various artists- The Royal Tenenbaums
-Various artists- Tropicália
-Various artists- Voyage to Planet Dog
-Various artists- Yabba-Dabba-Dance! Greatest Hits 1995
-Yonderboi - Shallow and Profound
-Young Black Teenagers - Dead Enz Kidz Doin' Lifetime Bidz
-Zero 7 - AnotherLateNight
-Zero 7 - Simple Things
-Zoom - Helium Octipede
-`;
-
-/* ==PARSE-START== */
-// Parseert het tekstblok naar { artist, album } objecten.
-// Ondersteunt "Artiest - Album" én regels zonder spatie voor het streepje
-// (zoals "Various artists- Titel").
-const albumsData = albumsRaw
-  .split('\n')
-  .map(line => line.trim())
-  .filter(line => line.length > 0)
-  .map(line => {
-    let idx = line.indexOf(' - ');
-    let sepLen = 3;
-    if(idx === -1){
-      idx = line.indexOf('-');
-      sepLen = 1;
+// De database is de enige bron voor de albumcollectie.
+let albumsData = [];
+const DB_URL = 'https://oqqukeaoscwfsijlwrpn.supabase.co';
+const DB_KEY = 'sb_publishable__Cl45YCzMcAbKi1WHrng9A_s9DH6bz_';
+function safeHttps(value){
+  try { const u = new URL(value); return u.protocol === 'https:' ? u.href : ''; }
+  catch { return ''; }
+}
+function spotifyItem(type, id){
+  if(!/^[A-Za-z0-9]{22}$/.test(id || '')) return '';
+  return getLinkMode() === 'app' ? `spotify:${type}:${id}` : `https://open.spotify.com/${type}/${id}`;
+}
+async function readDatabase(path){
+  const r = await fetch(DB_URL + '/rest/v1/' + path, {
+    headers: { apikey: DB_KEY }, signal: AbortSignal.timeout(20000), cache: 'no-store'
+  });
+  if(!r.ok) throw new Error('Database niet bereikbaar (' + r.status + ').');
+  return r.json();
+}
+async function loadCollection(){
+  searchInput.disabled = randomBtn.disabled = true;
+  searchInput.placeholder = 'Collectie laden…';
+  const status = document.getElementById('collectionStatus');
+  status.replaceChildren();
+  try {
+    const rows = [];
+    for(let offset=0;;offset+=500){
+      const batch = await readDatabase('albums?select=*&order=artist.asc,title.asc,id.asc&limit=500&offset='+offset);
+      rows.push(...batch); if(batch.length < 500) break;
     }
-    if(idx <= 0) return null;
-    const artist = line.slice(0, idx).trim();
-    const album = line.slice(idx + sepLen).trim();
-    if(!artist || !album) return null;
-    return { artist, album };
-  })
-  .filter(Boolean);
-/* ==PARSE-END== */
+    albumsData = rows.map(r => ({ ...r, album:r.title }));
+    searchInput.placeholder = 'Zoek artiest of album…';
+    searchInput.disabled = false;
+    randomBtn.disabled = !rows.length;
+    status.textContent = rows.length ? rows.length + ' albums' : 'De collectie is nog leeg.';
+  } catch(e){
+    status.textContent = 'De collectie kon niet worden geladen. ';
+    searchInput.placeholder = 'Collectie niet beschikbaar';
+    const retry = document.createElement('button');
+    retry.className = 'wrong-btn'; retry.textContent = 'Opnieuw proberen';
+    retry.onclick = loadCollection; status.appendChild(retry);
+  }
+}
 
 /* ============================================================
    LOGICA — hoeft niet aangepast te worden bij het toevoegen
@@ -708,7 +415,7 @@ function renderDropdown(filter){
     matches.forEach(a => {
       const div = document.createElement('div');
       div.className = 'dropdown-item';
-      div.innerHTML = `${a.artist} - <b>${a.album}</b>`;
+      div.innerHTML = `${esc(a.artist)} - <b>${esc(a.album)}</b>`;
       div.addEventListener('click', () => selectAlbum(a));
       dropdownList.appendChild(div);
     });
@@ -927,6 +634,7 @@ function itunesToCand(r){
     title: r.collectionName || '',
     coverUrl: r.artworkUrl100 ? r.artworkUrl100.replace('100x100', '600x600') : null,
     year: r.releaseDate ? r.releaseDate.slice(0, 4) : null,
+    storeUrl: r.collectionViewUrl || '',
     trackCount: r.trackCount || 0
   };
 }
@@ -939,6 +647,7 @@ function deezerToCand(r){
     title: r.title || '',
     coverUrl: r.cover_xl || r.cover_big || r.cover_medium || null,
     year: r.release_date ? r.release_date.slice(0, 4) : null,
+    storeUrl: r.link || '',
     trackCount: r.nb_tracks || 0
   };
 }
@@ -1053,7 +762,7 @@ async function fetchItunesTracks(id, countries){
     const tracks = ((d && d.results) || [])
       .filter(r => r.wrapperType === 'track' && r.trackName)
       .sort((x, y) => (x.discNumber || 1) - (y.discNumber || 1) || (x.trackNumber || 0) - (y.trackNumber || 0))
-      .map(r => ({ name: r.trackName, durationMs: r.trackTimeMillis || null, previewUrl: r.previewUrl || null }));
+      .map(r => ({ name: r.trackName, artist:r.artistName, durationMs: r.trackTimeMillis || null, previewUrl: safeHttps(r.previewUrl), storeUrl:r.trackViewUrl || '', source:'itunes' }));
     if(tracks.length) return tracks;
   }
   return [];
@@ -1064,7 +773,7 @@ async function fetchDeezerTracks(id){
   if(!d) d = await safeJsonp(`https://api.deezer.com/album/${enc(id)}/tracks?limit=200&output=jsonp`);
   return ((d && d.data) || [])
     .sort((x, y) => (x.disk_number || 1) - (y.disk_number || 1) || (x.track_position || 0) - (y.track_position || 0))
-    .map(r => ({ name: r.title, durationMs: r.duration ? r.duration * 1000 : null, previewUrl: r.preview || null }));
+    .map(r => ({ name: r.title, artist:r.artist?.name, durationMs: r.duration ? r.duration * 1000 : null, previewUrl: safeHttps(r.preview), storeUrl:r.link || '', source:'deezer' }));
 }
 
 async function fetchTracklist(c, a){
@@ -1120,7 +829,7 @@ playerEl.innerHTML = `
     <button class="ctl-btn main" type="button" data-role="toggle" aria-label="Afspelen/pauzeren">${ICON.play}</button>
     <button class="ctl-btn" type="button" data-role="next" aria-label="Volgende">${ICON.next}</button>
   </div>
-  <div class="player-note">Preview van 30 seconden · het hele nummer via de groene knop</div>
+  <div class="player-note">Korte preview</div>
 `;
 const pEl = role => playerEl.querySelector(`[data-role="${role}"]`);
 
@@ -1132,14 +841,21 @@ function fmtTime(sec){
 }
 
 function renderPlayerUI(){
-  const show = !!play || !!(playDisplay && playDisplay.tracks.some(hasPreview));
-  playerEl.hidden = !show;
+  playerEl.hidden = !(play && playDisplay && play.key === playDisplay.key);
 }
-
 function mountPlayer(){
-  const col = albumDisplay.querySelector('.cover-col');
-  if(col) col.appendChild(playerEl);
+  const list = document.getElementById('trackList');
+  const li = play && playDisplay && play.key === playDisplay.key && list
+    ? list.querySelector(`li[data-idx="${play.idx}"]`) : null;
+  if(li) li.appendChild(playerEl);
+  else playerEl.remove();
   renderPlayerUI();
+}
+function stopPlayback(){
+  audio.pause(); audio.removeAttribute('src'); audio.load();
+  preloader.removeAttribute('src'); preloader.load();
+  play = null; playDisplay = null; playerEl.remove();
+  if('mediaSession' in navigator) navigator.mediaSession.metadata = null;
 }
 
 function updateIcon(){
@@ -1157,7 +873,7 @@ function updateProgress(){
 function renderNowPlaying(){
   if(!play){ pEl('np').textContent = 'Klik op een nummer om af te spelen'; return; }
   const t = play.tracks[play.idx];
-  pEl('np').textContent = `${t.name} — ${play.a.artist}`;
+  pEl('np').textContent = `${t.name} — ${t.artist || play.a.artist}`;
 }
 
 // Kleurt het spelende nummer groen, ook als je terugkeert naar dit album
@@ -1168,6 +884,7 @@ function updateHighlight(){
   if(!play || !playDisplay || play.key !== playDisplay.key) return;
   const li = list.querySelector(`li[data-idx="${play.idx}"]`);
   if(li) li.classList.add('playing');
+  mountPlayer();
 }
 
 function nextIndex(from, dir){
@@ -1205,8 +922,9 @@ function startTrack(ctx, idx){
   play = { a: ctx.a, tracks: ctx.tracks, key: ctx.key, cover: ctx.cover, idx };
   audio.src = t.previewUrl;
   const p = audio.play();
-  if(p && p.catch) p.catch(() => {});
+  if(p && p.catch) p.catch(() => { pEl('np').textContent = 'Afspelen mislukt. Probeer opnieuw met de afspeelknop.'; });
   renderNowPlaying();
+  playerEl.querySelector('.player-note').textContent = t.source === 'itunes' ? 'Korte preview · provided courtesy of iTunes' : 'Korte preview · Deezer';
   renderPlayerUI();
   updateHighlight();
   updateProgress();
@@ -1225,7 +943,7 @@ function skip(dir){
 
 function togglePlay(){
   if(play){
-    if(audio.paused){ const p = audio.play(); if(p && p.catch) p.catch(() => {}); }
+    if(audio.paused){ const p = audio.play(); if(p && p.catch) p.catch(() => { pEl('np').textContent = 'Afspelen mislukt. Probeer opnieuw met de afspeelknop.'; }); }
     else audio.pause();
     return;
   }
@@ -1277,7 +995,7 @@ if('mediaSession' in navigator){
 
 // Klik op een tracktitel = afspelen; zonder preview opent de Spotify-link gewoon
 albumDisplay.addEventListener('click', e => {
-  const link = e.target.closest('a.track-link');
+  const link = e.target.closest('button.track-link');
   if(!link || !playDisplay) return;
   if(e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
   const idx = parseInt(link.dataset.idx, 10);
@@ -1310,7 +1028,8 @@ function savePick(label, key){
 
 async function renderAlbum(a){
   const requestId = ++currentRequestId;
-  const albumUrl = spotifySearchUrl(`${a.artist} ${a.album}`);
+  stopPlayback();
+  const albumUrl = spotifyItem('album', a.spotify_id);
 
   albumDisplay.innerHTML = `
     <div class="cover-col">
@@ -1321,8 +1040,8 @@ async function renderAlbum(a){
     </div>
     <div class="info">
       <div class="title-row">
-        <h1 class="album-title"><a href="${albumUrl}" target="_blank" rel="noopener">${esc(a.album)}</a></h1>
-        ${playButton(albumUrl, 'Open album op Spotify')}
+        <h1 class="album-title">${albumUrl ? `<a href="${albumUrl}" target="_blank" rel="noopener">${esc(a.album)}</a>` : esc(a.album)}</h1>
+        ${albumUrl ? playButton(albumUrl, 'Open album op Spotify') : ''}
       </div>
       <p class="artist-name">${esc(a.artist)}</p>
       <ol class="tracklist" id="trackList" style="list-style:none;">
@@ -1332,7 +1051,25 @@ async function renderAlbum(a){
   `;
   mountPlayer();
 
-  const cands = await findCandidates(a);
+  let stored;
+  try {
+    stored = await readDatabase('tracks?album_id=eq.'+encodeURIComponent(a.id)+'&select=*&order=disc_number.asc,track_number.asc');
+  } catch(e){
+    if(requestId !== currentRequestId) return;
+    document.getElementById('trackList').innerHTML='<li class="track-error">Nummers konden niet worden geladen. Kies het album opnieuw om het te proberen.</li>';
+    showCover(document.getElementById('coverWrap'), {coverUrl:safeHttps(a.cover_url)}, a);
+    return;
+  }
+  if(requestId !== currentRequestId) return;
+  if(stored.length){
+    showCover(document.getElementById('coverWrap'), {coverUrl:safeHttps(a.cover_url)}, a);
+    document.getElementById('releaseYear').textContent=a.release_year || '';
+    document.getElementById('matchInfo').textContent='Uit je collectie';
+    showStoreLink(a.itunes_url);
+    renderTracks(a, stored.map(t=>({name:t.title,artist:t.artist,durationMs:t.duration_ms,previewUrl:safeHttps(t.preview_url),spotify_id:t.spotify_id,storeUrl:t.itunes_url,source:'itunes'})), 'db:'+a.id, safeHttps(a.cover_url));
+    return;
+  }
+  const cands = a.itunes_id ? [{source:'itunes',id:a.itunes_id,artist:a.artist,title:a.album,coverUrl:safeHttps(a.cover_url),year:a.release_year,countries:[a.itunes_country || 'NL'],storeUrl:a.itunes_url}] : await findCandidates(a);
   if(requestId !== currentRequestId) return;
 
   const picked = loadPicks()[labelFor(a)];
@@ -1373,7 +1110,7 @@ async function showCandidate(a, cands, idx, tried){
   const trackListEl = document.getElementById('trackList');
   if(!coverWrap || !trackListEl) return;
 
-  playDisplay = null;
+  stopPlayback();
   updateHighlight();
   renderPlayerUI();
 
@@ -1394,9 +1131,10 @@ async function showCandidate(a, cands, idx, tried){
   await ensureDetails(c);
   if(requestId !== currentRequestId) return;
 
-  showCover(coverWrap, c, a);
-  releaseYearEl.textContent = c.year || '';
-  matchInfo.textContent = `Gevonden: ${c.artist} – ${c.title}`;
+  showCover(coverWrap, {...c, coverUrl:safeHttps(a.cover_url) || safeHttps(c.coverUrl)}, a);
+  releaseYearEl.textContent = a.release_year || c.year || '';
+  showStoreLink(c.storeUrl);
+  matchInfo.textContent = `Automatisch gevonden: ${c.artist} – ${c.title}`;
 
   wrongBtn.hidden = cands.length < 2;
   wrongBtn.textContent = `Verkeerd album? Probeer volgende (${idx + 1}/${cands.length})`;
@@ -1419,20 +1157,36 @@ async function showCandidate(a, cands, idx, tried){
     return;
   }
 
+  renderTracks(a, tracks, labelFor(a) + '|' + candKey(c), safeHttps(a.cover_url) || safeHttps(c.coverUrl));
+}
+function showStoreLink(url){
+  const target = safeHttps(url);
+  const parent = document.getElementById('matchInfo');
+  document.getElementById('storeLink')?.remove();
+  if(target){
+    const link = document.createElement('a'); link.id='storeLink';
+    link.className='match-info'; link.href=target; link.target='_blank'; link.rel='noopener noreferrer';
+    link.textContent=new URL(target).hostname.includes('deezer') ? 'Bekijk op Deezer ↗' : 'Bekijk in de iTunes Store ↗';
+    parent.after(link);
+  }
+}
+function renderTracks(a, tracks, key, cover){
+  const trackListEl = document.getElementById('trackList');
   trackListEl.innerHTML = tracks.map((t, i) => {
-    const trackUrl = spotifySearchUrl(`${a.artist} ${t.name}`);
-    const durationLabel = formatDuration(t.durationMs);
+    const trackUrl = spotifyItem('track', t.spotify_id);
+    const storeUrl = safeHttps(t.storeUrl);
+    const name = hasPreview(t)
+      ? `<button type="button" class="track-link" data-idx="${i}" aria-label="Speel preview: ${esc(t.name)}">${esc(t.name)}</button>`
+      : trackUrl ? `<a class="track-link" href="${trackUrl}" target="_blank" rel="noopener">${esc(t.name)}</a>` : `<span class="track-link">${esc(t.name)}</span>`;
     return `<li data-idx="${i}">
-      <span class="track-num">${i + 1}.</span>
-      <a class="track-link" data-idx="${i}" href="${trackUrl}" target="_blank" rel="noopener">${esc(t.name)}</a>
-      <span class="track-duration">${durationLabel}</span>
-      ${playButton(trackUrl, 'Open nummer op Spotify')}
+      <span class="track-num">${i+1}.</span>${name}
+      <span class="track-duration">${formatDuration(t.durationMs)}</span>
+      ${trackUrl ? playButton(trackUrl, 'Open nummer op Spotify') : ''}
+      ${storeUrl ? `<a class="source-link" href="${esc(storeUrl)}" target="_blank" rel="noopener noreferrer">${t.source === 'deezer' ? 'Deezer' : 'iTunes'} ↗</a>` : ''}
     </li>`;
   }).join('');
-
-  playDisplay = { a, tracks, key: labelFor(a) + '|' + candKey(c), cover: c.coverUrl };
-  renderPlayerUI();
-  updateHighlight();
+  playDisplay={a,tracks,key,cover};
+  renderPlayerUI(); updateHighlight();
 }
 
 // dropdown interactie
@@ -1449,6 +1203,7 @@ searchInput.addEventListener('keydown', (e) => {
 
 // "Random" knop: kiest een willekeurig album uit de volledige lijst
 randomBtn.addEventListener('click', () => {
+  if(!albumsData.length) return;
   const randomIndex = Math.floor(Math.random() * albumsData.length);
   selectAlbum(albumsData[randomIndex]);
 });
@@ -1467,6 +1222,7 @@ appModeToggle.checked = (getLinkMode() === 'app');
 // Zoekbalk start in de homepage-slot (gecentreerd, onder de titel)
 homeSearchRow.appendChild(searchRowEl);
 
+loadCollection();
 // Start met lege zoekbox, homepage zichtbaar en gecentreerd, geen album getoond
 </script>
 </body>
