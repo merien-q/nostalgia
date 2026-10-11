@@ -120,18 +120,22 @@
   .cover-stage{position:relative;width:100%;touch-action:pan-y;}
   .cover-toggle{display:block;position:relative;width:100%;padding:0;border:0;background:transparent;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:pan-y;}
   .cover-toggle:focus-visible,.album-nav:focus-visible{outline:2px solid var(--green);outline-offset:6px;}
+  .cover-edit{position:absolute;right:12px;bottom:12px;z-index:4;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid #ffffff33;border-radius:50%;background:#111c;color:#fff;text-decoration:none;box-shadow:0 2px 10px #0008;transition:background .15s,transform .15s;}
+  .cover-edit:hover{background:var(--green);color:#121212;transform:scale(1.08);}
+  .cover-edit:focus-visible{outline:2px solid var(--green);outline-offset:3px;}
+  .cover-edit svg{width:17px;height:17px;}
   .cover-wrap{width:100%;aspect-ratio:1;position:relative;overflow:hidden;border-radius:12px;background:#242424;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 48px rgba(0,0,0,.4);}
   .album-caption{padding:22px 4px 0;overflow-wrap:anywhere;}
   .album-title-row{display:flex;align-items:center;justify-content:center;gap:9px;}
-  .album-caption .artist-name{font-size:16px;margin:8px 0 0;}
+  .album-caption .artist-name{display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;margin:8px 0 0;}
   .album-caption .album-title{font-size:clamp(22px,3vw,29px);line-height:1.2;font-weight:650;letter-spacing:-.6px;overflow-wrap:anywhere;}
   .album-caption .album-title a{color:inherit;text-decoration:none;}
   .caption-actions{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;min-height:26px;}
-  .release-year{min-height:0;color:var(--muted);font-size:inherit;}
+  .release-year{min-height:0;color:var(--muted);font-size:inherit;white-space:nowrap;}
   .album-play{width:30px;height:30px;flex:0 0 30px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--green);color:#121212;text-decoration:none;transition:background .15s,transform .15s;}
   .album-play svg{width:14px;height:14px;margin-left:2px;}
   .album-play:hover{background:#1ed760;transform:scale(1.08);}
-  .favorite-star{width:28px;height:28px;border:0;background:transparent;padding:0;color:#ffd54f;font:19px/1 system-ui;cursor:pointer;}
+  .favorite-star{width:24px;height:24px;flex:0 0 24px;border:0;background:transparent;padding:0;color:#ffd54f;font:17px/1 system-ui;cursor:pointer;}
   .favorite-star:hover{transform:scale(1.12);}
   .favorite-star:focus-visible,.favorites-filter:focus-visible{outline:2px solid #ffd54f;outline-offset:3px;}
   .favorites-filter{width:36px;height:38px;padding:0;flex:0 0 36px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:#ffd54f;font:19px/1 system-ui;}
@@ -226,6 +230,8 @@
     padding:9px 0; border-bottom:1px solid var(--border);
     font-size:14px; display:flex; align-items:center; gap:12px;
   }
+  .tracklist li[data-idx]{animation:track-stack .36s ease both;animation-delay:calc(var(--track-index,0) * 55ms);}
+  @keyframes track-stack{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
   .track-num{ color:var(--muted); min-width:18px; font-size:13px; }
   .tracklist a.track-link{ color:var(--text); text-decoration:none; flex:1; }
   .tracklist a.track-link:hover{ color:var(--green); text-decoration:underline; }
@@ -313,6 +319,7 @@
   @media(prefers-reduced-motion:reduce){
     #albumDisplay.expanded .info{animation:none;}
     .cover-wrap img{transition:opacity .2s linear;transform:none;}
+    .tracklist li[data-idx]{animation:none;}
   }
   #collectionStatus{font-size:12px;color:var(--muted);margin-top:12px;}
   button:disabled{opacity:.45;cursor:wait;}
@@ -1154,17 +1161,21 @@ async function renderAlbum(a){
           <button type="button" class="cover-toggle" id="coverToggle" aria-expanded="${isAlbumExpanded}" aria-controls="albumInfo" aria-label="${isAlbumExpanded ? 'Nummers verbergen' : 'Nummers tonen'}: ${esc(a.album)}">
             <div class="cover-wrap" id="coverWrap"><div class="spinner"></div></div>
           </button>
+          <a class="cover-edit" href="./admin.html?id=${encodeURIComponent(a.id)}" aria-label="Bewerk ${esc(a.album)} in albumbeheer" title="Bewerk album">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+          </a>
           <button type="button" class="album-nav next" id="nextAlbum" aria-label="Volgend album">›</button>
         </div>
         <div class="album-caption">
           <div class="album-title-row">
             <h1 class="album-title">${esc(a.album)}</h1>
-            <a class="album-play" href="${albumUrl}" target="_blank" rel="noopener" aria-label="Speel ${esc(a.album)} af op Spotify">${playIconSvg}</a>
           </div>
-          <p class="artist-name">${esc(a.artist)} <span class="release-year" id="releaseYear">${a.release_year ? `(${esc(a.release_year)})` : ''}</span></p>
-          <div class="caption-actions">
+          <p class="artist-name">
             <button class="favorite-star" id="favoriteToggle" type="button" aria-label="${favoriteIds.has(a.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}" aria-pressed="${favoriteIds.has(a.id)}" title="${favoriteIds.has(a.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}">${favoriteIds.has(a.id) ? '★' : '☆'}</button>
-          </div>
+            <span class="artist-label">${esc(a.artist)}</span>
+            <span class="release-year" id="releaseYear">${a.release_year ? `(${esc(a.release_year)})` : ''}</span>
+            <a class="album-play" href="${albumUrl}" target="_blank" rel="noopener" aria-label="Speel ${esc(a.album)} af op Spotify">${playIconSvg}</a>
+          </p>
         </div>
         <div id="albumPlayerSlot"></div>
         <div class="album-meta">
@@ -1326,7 +1337,7 @@ function renderTracks(a, tracks, key, cover){
     const name = hasPreview(t)
       ? `<button type="button" class="track-link" data-idx="${i}" aria-label="Speel preview: ${esc(t.name)}">${esc(t.name)}</button>`
       : trackUrl ? `<a class="track-link" href="${trackUrl}" target="_blank" rel="noopener">${esc(t.name)}</a>` : `<span class="track-link">${esc(t.name)}</span>`;
-    return `<li data-idx="${i}">
+    return `<li data-idx="${i}" style="--track-index:${i}">
       <span class="track-num">${i+1}.</span>${name}
       <span class="track-duration">${formatDuration(t.durationMs)}</span>
       ${trackUrl ? playButton(trackUrl, 'Open nummer op Spotify') : ''}
